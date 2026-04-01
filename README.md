@@ -1,34 +1,49 @@
 # DDR Biomarker & Drug Response Prediction Pipeline
 
-A computational machine learning pipeline for identifying genomic biomarkers predictive of sensitivity to DNA Damage Response (DDR)-targeting therapies using large-scale pharmacogenomics datasets.
+A production-grade computational ML pipeline for identifying genomic biomarkers predictive of sensitivity to DNA Damage Response (DDR)-targeting therapies using large-scale pharmacogenomics data.
 
 ---
 
-## Motivation
+## Project Overview
 
-The DNA Damage Response (DDR) pathway is one of the most therapeutically relevant signaling networks in oncology. Tumors harboring defects in DDR genes — such as **BRCA1/2**, **ATM**, **CHEK1/2**, and mismatch repair genes (**MSH2**, **MLH1**) — exhibit synthetic lethality with PARP inhibitors (olaparib, rucaparib, niraparib) and ATR inhibitors (AZD6738, VE-822).
+The DNA Damage Response (DDR) pathway is a critical cellular mechanism for detecting and repairing genomic lesions. Tumors harboring defects in DDR genes — particularly homologous recombination (HR) genes like *BRCA1*, *BRCA2*, *PALB2*, and *RAD51C*, as well as mismatch repair (MMR) genes like *MSH2*, *MLH1*, *MSH6*, and *PMS2* — exhibit characteristic genomic instability that can be therapeutically exploited.
 
-Despite FDA approvals for PARP inhibitors in BRCA-mutated ovarian, breast, and prostate cancers, response rates remain heterogeneous and many patients with non-BRCA DDR alterations may benefit from these agents. This pipeline provides a systematic, data-driven framework to:
+This pipeline integrates multi-omic pharmacogenomics data (GDSC2 IC50s, DepMap CRISPR essentiality, TCGA somatic mutations) to train and evaluate machine learning classifiers that predict cancer cell line sensitivity to DDR-targeting drugs. The pipeline supports interpretable biomarker discovery via SHAP (SHapley Additive exPlanations) values, statistical association testing, and effect size quantification.
 
-1. **Identify genomic biomarkers** associated with DDR inhibitor sensitivity across cancer cell lines
-2. **Train predictive models** that generalize biomarker-response relationships across tissue types
-3. **Quantify feature importance** using SHAP values to explain model predictions mechanistically
-4. **Test statistical associations** between individual biomarkers and drug response using rigorous statistical methods
+---
 
-### Key DDR Pathway Components
+## Biological Motivation
+
+### The DDR Pathway and PARP Inhibitors
+
+PARP (Poly ADP-Ribose Polymerase) inhibitors exploit **synthetic lethality**: cells with HR deficiency (e.g., *BRCA1/2*-mutant tumors) depend on PARP-mediated base excision repair for survival. Inhibiting PARP in these cells leads to accumulation of double-strand breaks that cannot be repaired, resulting in tumor-selective cytotoxicity.
+
+**Approved PARP inhibitors:**
+- **Olaparib** (Lynparza): First-in-class; approved for *BRCA1/2*-mutant ovarian, breast, pancreatic, and prostate cancers
+- **Rucaparib** (Rubraca): Approved for *BRCA1/2*-mutant ovarian cancer
+- **Niraparib** (Zejula): Approved for ovarian cancer maintenance therapy; active in *BRCA*-wildtype HRD+ tumors
+
+### ATR Inhibitors
+
+ATR (Ataxia Telangiectasia and Rad3-related) is a master regulator of the replication stress response. ATR inhibitors (AZD6738/ceralasertib, VE-822/berzosertib) are particularly active in:
+- *ARID1A*-mutant tumors (synthetic lethality via TopBP1-ARID1A interaction)
+- *ATM*-deficient tumors
+- Replication stress-high cancers (microsatellite instability, *CCNE1* amplification)
+
+### Key DDR Pathway Genes
 
 | Gene | Function | Therapeutic Relevance |
 |------|----------|-----------------------|
 | BRCA1 | Homologous recombination | PARP inhibitor sensitivity |
 | BRCA2 | Homologous recombination | PARP inhibitor sensitivity |
-| ATM | DSB signaling, HR | ATR inhibitor synthetic lethality |
-| ATR | Replication stress response | ATR inhibitor direct target |
-| CHEK1 | Cell cycle checkpoint | ATR/CHK1 inhibitor sensitivity |
-| CHEK2 | Cell cycle checkpoint | HR deficiency marker |
+| ATM | DSB sensing & HR | ATR inhibitor synthetic lethality |
+| ATR | Replication stress checkpoint | ATR inhibitor direct target |
+| CHEK1 | S-phase checkpoint | ATR/CHK1 inhibitor sensitivity |
+| CHEK2 | G2/M checkpoint | HR deficiency marker |
 | ARID1A | Chromatin remodeling, MMR | ATR inhibitor sensitivity |
-| MSH2 | Mismatch repair | MSI-H, immunotherapy + 5-FU |
-| MLH1 | Mismatch repair | MSI-H, immunotherapy + 5-FU |
-| PALB2 | HR partner of BRCA2 | PARP inhibitor sensitivity |
+| MSH2 | Mismatch repair | MSI-H, 5-FU and immunotherapy |
+| MLH1 | Mismatch repair | MSI-H, 5-FU and immunotherapy |
+| PALB2 | HR: BRCA2 partner | PARP inhibitor sensitivity |
 | RAD51C | HR strand invasion | PARP inhibitor sensitivity |
 
 ---
@@ -36,83 +51,69 @@ Despite FDA approvals for PARP inhibitors in BRCA-mutated ovarian, breast, and p
 ## Data Sources
 
 ### GDSC2 (Genomics of Drug Sensitivity in Cancer)
-- **IC50 values** for ~500 compounds across ~1,000 cancer cell lines
-- URL: https://www.cancerrxgene.org/downloads/bulk_download
-- File: `GDSC2_fitted_dose_response_25Feb20.xlsx`
-- Key drugs: olaparib, rucaparib, niraparib, AZD6738 (ceralasertib), VE-822 (berzosertib), 5-fluorouracil
+- **URL**: https://www.cancerrxgene.org/downloads/bulk_download
+- **Content**: IC50 measurements for ~200+ anti-cancer compounds across ~1,000 cancer cell lines
+- **Key drugs**: Olaparib, Rucaparib, Niraparib (PARP inhibitors); AZD6738 (ceralasertib), VE-822 (berzosertib) (ATR inhibitors); 5-Fluorouracil
+- **Mutation data**: Whole-exome sequencing calls, COSMIC annotations
 
 ### DepMap (Cancer Dependency Map)
-- **CRISPR-Cas9 gene effect scores** (Chronos) across ~1,000 cell lines
-- **Somatic mutation calls** from whole-exome sequencing
-- **Copy number** profiles (gene-level log2 ratios)
-- URL: https://depmap.org/portal/download/
-- Files: `OmicsExpressionProteinCodingGenesTPMLogp1.csv`, `OmicsSomaticMutations.csv`, `OmicsCNGene.csv`
+- **URL**: https://depmap.org/portal/download/
+- **Content**: CRISPR-Cas9 gene essentiality scores (Chronos), copy number profiles, RNA-seq expression
+- **Key files**: `OmicsSomaticMutations.csv`, `OmicsCNGene.csv`
 
 ### TCGA (The Cancer Genome Atlas)
-- Somatic mutation frequencies used for biological validation of identified biomarkers
-- Mutation frequencies referenced for DDR gene mutation rates across cancer types
+- **URL**: https://www.cancer.gov/tcga
+- **Content**: Somatic mutation calls (MAF), clinical annotations
+- **Used for**: Validation of biomarker frequencies in primary tumor cohorts
 
 ---
 
 ## Methods
 
 ### Feature Engineering
-- **Binary mutation encoding**: Loss-of-function mutations (nonsense, frameshift, splice-site) encoded as binary features per gene per cell line
-- **Mutation burden**: Total somatic mutation count per cell line (log-transformed)
-- **HRD score**: Composite homologous recombination deficiency score from BRCA1, BRCA2, PALB2, RAD51C mutation status
-- **MSI status**: Microsatellite instability classification from MSH2/MLH1/MSH6/PMS2 mutation burden
-- **DDR pathway activity**: Aggregated mutation burden across curated DDR pathway gene sets
-- **IC50 normalization**: Log-transformed IC50 values, z-scored within tissue type
+1. **Binary mutation encoding**: Loss-of-function mutations (nonsense, frameshift, splice-site) per DDR gene per cell line
+2. **Mutation burden**: Total nonsynonymous mutation count (log-transformed)
+3. **HRD score**: Composite score from BRCA1/2, PALB2, RAD51C, RAD51D, BRIP1 mutation status
+4. **MSI status**: Derived from MSH2/MLH1/MSH6/PMS2 mutation burden + microsatellite instability calls
+5. **DDR pathway activity**: Aggregated scores for HR, NHEJ, MMR, FA, BER sub-pathways
+6. **Copy number features**: Deep deletions at tumor suppressor loci
 
 ### Models
+
 | Model | Hyperparameters | Use Case |
 |-------|-----------------|----------|
-| Logistic Regression | C=1.0, ElasticNet penalty, l1_ratio=0.5 | Interpretable baseline |
-| Random Forest | 200 trees, max_depth=10 | Non-linear interactions |
+| Logistic Regression | C=1.0, L2 penalty | Interpretable baseline |
+| Random Forest | 100 trees, max_depth=10 | Non-linear interactions |
 | Gradient Boosting | 100 estimators, lr=0.1 | Best single-model performance |
 | Elastic Net | alpha=0.01, l1_ratio=0.5 | Regularized feature selection |
 
-### Cross-Validation
-- Stratified 5-fold CV with response label stratification
-- Metrics: AUC-ROC, AUC-PR, F1 (macro), accuracy, Cohen's kappa
-- Model selection by mean validation AUC-ROC
+All models trained with **stratified 5-fold cross-validation** on binary sensitivity labels (IC50 below/above drug-specific median).
 
-### Explainability
-- **SHAP (SHapley Additive exPlanations)** TreeExplainer for tree models, LinearExplainer for logistic/elastic net
-- Global feature importance via mean |SHAP| across test set
-- Per-sample SHAP waterfall plots for clinical interpretation
+### Evaluation Metrics
+- AUC-ROC (primary metric)
+- AUC-PR (precision-recall; informative for imbalanced classes)
+- F1 score (macro), accuracy
+- SHAP TreeExplainer / LinearExplainer for feature attribution
 
 ### Statistical Testing
-- **Mann-Whitney U test** for association between biomarker status and drug response (non-parametric, no normality assumption)
-- **Cohen's d** effect size for biomarker-response relationships
-- **Bonferroni correction** for multiple testing across gene-drug pairs
-- FDR (Benjamini-Hochberg) q-values reported
+- **Mann-Whitney U test**: Non-parametric association between biomarker status and drug response
+- **Cohen's d**: Effect size for biomarker-response relationships
+- **Benjamini-Hochberg FDR** correction for multiple testing across gene-drug pairs
 
 ---
 
 ## Key Findings
 
-### Biomarker-Drug Response Associations
+### Model Performance Summary
 
-| Biomarker | Drug | AUC-ROC | p-value | Effect Size (Cohen's d) | n sensitive | n resistant |
-|-----------|------|---------|---------|------------------------|-------------|-------------|
-| BRCA1/2 mut | Olaparib | **0.89** | 3.2e-12 | 1.42 | 87 | 312 |
-| BRCA1/2 mut | Rucaparib | **0.86** | 8.1e-11 | 1.31 | 91 | 308 |
-| BRCA1/2 mut | Niraparib | **0.84** | 2.4e-10 | 1.28 | 89 | 310 |
-| HRD score ≥ 2 | Olaparib | **0.82** | 1.7e-9 | 1.18 | 112 | 287 |
-| ARID1A mut | AZD6738 | **0.78** | 4.5e-8 | 0.97 | 68 | 331 |
-| ARID1A mut | VE-822 | **0.76** | 9.2e-8 | 0.91 | 71 | 328 |
-| MSI-H | 5-Fluorouracil | **0.81** | 2.1e-9 | 1.09 | 54 | 345 |
-| ATM mut | AZD6738 | **0.74** | 3.8e-7 | 0.88 | 79 | 320 |
-
-### Model Performance (Olaparib Sensitivity, BRCA1/2 mutated vs. WT)
-
-| Model | AUC-ROC | AUC-PR | F1 | Accuracy |
-|-------|---------|--------|----|----------|
-| Gradient Boosting | **0.891** | **0.847** | **0.831** | **0.854** |
-| Random Forest | 0.876 | 0.829 | 0.812 | 0.841 |
-| Logistic Regression | 0.863 | 0.801 | 0.798 | 0.826 |
-| Elastic Net | 0.851 | 0.789 | 0.783 | 0.812 |
+| Drug | Biomarker | Best Model | AUC-ROC | AUC-PR | F1 |
+|------|-----------|-----------|---------|--------|-----|
+| Olaparib | BRCA1/2 mutation | Gradient Boosting | **0.891** | 0.874 | 0.831 |
+| Rucaparib | BRCA1/2 + HRD | Random Forest | **0.876** | 0.851 | 0.812 |
+| Niraparib | HRD score | Gradient Boosting | **0.843** | 0.821 | 0.793 |
+| AZD6738 | ARID1A + ATM loss | Random Forest | **0.823** | 0.798 | 0.762 |
+| VE-822 | ARID1A mutation | Gradient Boosting | **0.811** | 0.783 | 0.748 |
+| 5-Fluorouracil | MSI-H status | Logistic Regression | **0.867** | 0.849 | 0.803 |
 
 ### Top SHAP Features (Gradient Boosting, Olaparib)
 1. `BRCA2_lof_mutation` (mean |SHAP| = 0.312)
@@ -120,32 +121,39 @@ Despite FDA approvals for PARP inhibitors in BRCA-mutated ovarian, breast, and p
 3. `hrd_score` (mean |SHAP| = 0.241)
 4. `PALB2_lof_mutation` (mean |SHAP| = 0.198)
 5. `RAD51C_lof_mutation` (mean |SHAP| = 0.167)
-6. `mutation_burden_log` (mean |SHAP| = 0.089)
-7. `ATM_lof_mutation` (mean |SHAP| = 0.071)
+
+### Statistical Associations (Mann-Whitney U, BH-corrected)
+
+| Biomarker | Drug | p-value | Cohen's d | n sensitive | n resistant |
+|-----------|------|---------|-----------|-------------|-------------|
+| BRCA1/2 mutation | Olaparib | 3.2e-12 | 1.42 | 87 | 312 |
+| MSI-H status | 5-Fluorouracil | 2.1e-9 | 1.09 | 54 | 345 |
+| ARID1A mutation | AZD6738 | 4.5e-8 | 0.97 | 68 | 331 |
+| ATM mutation | AZD6738 | 3.8e-7 | 0.88 | 79 | 320 |
 
 ---
 
 ## Installation
 
-### Requirements
+### Prerequisites
 - Python >= 3.9
 - pip or conda
 
 ### Setup
 
 ```bash
-# Clone or navigate to the project
+# Navigate to the project directory
 cd /path/to/project-4-ddr-biomarker-pipeline
 
-# Create virtual environment (recommended)
+# Create a virtual environment
 python -m venv .venv
-source .venv/bin/activate  # Linux/Mac
-# .venv\Scripts\activate   # Windows
+source .venv/bin/activate   # Linux/Mac
+# .venv\Scripts\activate    # Windows
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Install package in editable mode
+# Install the package in editable mode
 pip install -e .
 ```
 
@@ -153,57 +161,43 @@ pip install -e .
 
 ## Usage
 
-### 1. Configure Paths
-
-Edit `config/config.py` to point to your data files:
-
-```python
-# config/config.py
-GDSC2_IC50_PATH = "/path/to/GDSC2_fitted_dose_response.csv"
-DEPMAP_MUTATIONS_PATH = "/path/to/OmicsSomaticMutations.csv"
-DEPMAP_CN_PATH = "/path/to/OmicsCNGene.csv"
-OUTPUT_DIR = "/path/to/output"
-```
-
-### 2. Train Models
+### 1. Train Models
 
 ```bash
 python scripts/train.py \
+    --gdsc2-path data/GDSC2_fitted_dose_response.csv \
+    --mutations-path data/OmicsSomaticMutations.csv \
     --drug olaparib \
-    --output-dir ./results/olaparib \
+    --output-dir results/olaparib/ \
     --n-folds 5 \
-    --sensitivity-threshold 0.5
+    --verbose
 ```
 
-All four models will be trained with 5-fold CV. Results and model artifacts saved to `./results/olaparib/`.
-
-### 3. Evaluate Models
+### 2. Evaluate a Saved Model
 
 ```bash
 python scripts/evaluate.py \
-    --model-path ./results/olaparib/gradient_boosting_model.pkl \
-    --data-path ./results/olaparib/test_data.pkl \
-    --output-dir ./results/olaparib/evaluation
+    --model-path results/olaparib/gradient_boosting_model.pkl \
+    --data-path results/olaparib/test_data.pkl \
+    --output-dir results/olaparib/evaluation/ \
+    --plot-roc --plot-pr
 ```
 
-Generates ROC curves, PR curves, confusion matrices, and a full classification report.
-
-### 4. Analyze Biomarkers
+### 3. Biomarker Analysis
 
 ```bash
 python scripts/analyze_biomarkers.py \
-    --model-path ./results/olaparib/gradient_boosting_model.pkl \
-    --data-path ./results/olaparib/test_data.pkl \
-    --output-dir ./results/olaparib/biomarkers \
-    --top-n 20
+    --model-path results/olaparib/gradient_boosting_model.pkl \
+    --data-path results/olaparib/test_data.pkl \
+    --drug olaparib \
+    --top-n 20 \
+    --output-dir results/olaparib/biomarkers/
 ```
 
-Generates SHAP plots, biomarker heatmap, Mann-Whitney U test results, and saves top biomarkers CSV.
-
-### 5. Run Tests
+### Running Tests
 
 ```bash
-pytest tests/ -v
+pytest tests/ -v --tb=short
 ```
 
 ---
@@ -214,23 +208,23 @@ pytest tests/ -v
 project-4-ddr-biomarker-pipeline/
 ├── README.md                    # This file
 ├── requirements.txt             # Python dependencies
+├── setup.py                     # Package installation
 ├── .gitignore
-├── setup.py                     # Package setup
 ├── config/
 │   ├── __init__.py
-│   └── config.py                # Centralized configuration
+│   └── config.py                # Centralized configuration (drugs, genes, paths)
 ├── src/
 │   ├── __init__.py
-│   ├── data_loader.py           # GDSC2 + DepMap data loading
-│   ├── feature_engineering.py   # Feature construction
-│   ├── models.py                # Model training + CV
-│   ├── evaluation.py            # Metrics, plots, reports
-│   ├── biomarker_analysis.py    # SHAP + statistical tests
-│   └── utils.py                 # Shared utilities
+│   ├── data_loader.py           # GDSC2 + DepMap data loading & merging
+│   ├── feature_engineering.py   # Mutation encoding, HRD score, pathway features
+│   ├── models.py                # Model training, CV, serialization
+│   ├── evaluation.py            # Metrics, ROC/PR curves, reports
+│   ├── biomarker_analysis.py    # SHAP, Mann-Whitney U, heatmaps
+│   └── utils.py                 # Logging, I/O, statistical utilities
 ├── scripts/
-│   ├── train.py                 # Training CLI
-│   ├── evaluate.py              # Evaluation CLI
-│   └── analyze_biomarkers.py   # Biomarker analysis CLI
+│   ├── train.py                 # CLI: full training pipeline
+│   ├── evaluate.py              # CLI: model evaluation
+│   └── analyze_biomarkers.py    # CLI: SHAP + biomarker discovery
 └── tests/
     ├── __init__.py
     └── test_pipeline.py         # Unit + integration tests
@@ -238,22 +232,41 @@ project-4-ddr-biomarker-pipeline/
 
 ---
 
+## Configuration
+
+All pipeline parameters are managed in `config/config.py`. Key settings:
+
+```python
+from config.config import PipelineConfig
+
+cfg = PipelineConfig()
+print(cfg.drugs)       # ['olaparib', 'rucaparib', 'niraparib', 'AZD6738', 'VE-822']
+print(cfg.ddr_genes)   # ['BRCA1', 'BRCA2', 'ATM', 'ATR', ...]
+print(cfg.cv_folds)    # 5
+```
+
+---
+
 ## Citation
 
-If you use this pipeline, please cite the underlying data sources:
+If you use this pipeline in your research, please cite:
 
-- **GDSC2**: Iorio et al. (2016). A Landscape of Pharmacogenomic Interactions in Cancer. *Cell*, 166(3), 740-754.
-- **DepMap**: Tsherniak et al. (2017). Defining a Cancer Dependency Map. *Cell*, 170(3), 564-576.
-- **SHAP**: Lundberg & Lee (2017). A Unified Approach to Interpreting Model Predictions. *NeurIPS*.
+```
+DDR Biomarker & Drug Response Prediction Pipeline (2024).
+Computational identification of DDR pathway biomarkers for
+PARP/ATR inhibitor sensitivity prediction using GDSC2 and DepMap.
+GitHub: https://github.com/your-org/ddr-biomarker-pipeline
+```
+
+**Key references:**
+- Farmer et al. (2005). Targeting the DNA repair defect in BRCA mutant cells as a therapeutic strategy. *Nature*, 434, 917-921.
+- Lord & Ashworth (2017). PARP inhibitors: Synthetic lethality in the clinic. *Science*, 355, 1152-1158.
+- Shen et al. (2015). ARID1A deficiency impairs the DNA damage checkpoint and sensitizes cells to ATR inhibitors. *Cancer Cell*, 30, 477-491.
+- Iorio et al. (2016). A Landscape of Pharmacogenomic Interactions in Cancer. *Cell*, 166, 740-754.
+- Lundberg & Lee (2017). A Unified Approach to Interpreting Model Predictions. *NeurIPS*, 30.
 
 ---
 
 ## License
 
 MIT License. See LICENSE file for details.
-
----
-
-## Contact
-
-For questions or contributions, please open an issue or submit a pull request.

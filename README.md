@@ -36,26 +36,30 @@ BRCA1, BRCA2, ATM, ATR, PALB2, RAD51, MLH1, MSH2, MSH6, POLE, ARID1A, CDK12, CHE
 
 ```
 project-4-ddr-biomarker-pipeline/
+├── README.md
+├── Dockerfile
+├── environment.yml
+├── requirements.txt
 ├── config/
-│   └── config.py                  # Pipeline config, gene panels, hyperparameters
+│   ├── __init__.py
+│   └── config.py
 ├── src/
-│   ├── data_loader.py             # GDSC2 + DepMap data loading
-│   ├── feature_engineering.py     # HRD scoring, MSI, DDR pathway features
-│   ├── models.py                  # LogReg, GBM with stratified CV
-│   ├── biomarker_analysis.py      # SHAP, statistical tests, clustermap
-│   ├── evaluation.py              # ROC/PR curves, model comparison
-│   └── utils.py                   # Helpers
+│   ├── __init__.py
+│   ├── biomarker_analysis.py
+│   ├── data_loader.py
+│   ├── evaluation.py
+│   ├── feature_engineering.py
+│   ├── models.py
+│   └── utils.py
 ├── scripts/
-│   ├── run_pipeline.py            # Full pipeline CLI
-│   ├── run_biomarker_analysis.py  # Biomarker-only analysis
-│   └── run_evaluation.py          # Evaluation-only
+│   ├── run_pipeline.py
+│   ├── run_biomarker_analysis.py
+│   └── run_evaluation.py
 ├── tests/
+│   ├── __init__.py
 │   └── test_pipeline.py
 ├── data/
-├── results/
-├── requirements.txt
-├── environment.yml
-└── LICENSE
+└── results/
 ```
 
 ## Quick Start

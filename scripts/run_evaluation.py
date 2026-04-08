@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate evaluation plots for trained models.
+"""Generate evaluation plots from pipeline results.
 
 Usage:
     python scripts/run_evaluation.py --results-dir results --output-dir results/figures
@@ -26,17 +26,23 @@ def main():
     logger = setup_logging("evaluation")
     ensure_dir(args.output_dir)
 
-    # Load saved results if available
+    # Try loading pickled results first (saved by run_pipeline.py)
     results_path = os.path.join(args.results_dir, "model_results.pkl")
     if os.path.exists(results_path):
         with open(results_path, "rb") as f:
             results = pickle.load(f)
-        logger.info(f"Loaded results from {results_path}")
+        logger.info("Loaded results from %s", results_path)
         plot_roc_curves(results, os.path.join(args.output_dir, "roc_curves.png"))
         plot_model_comparison(results, os.path.join(args.output_dir, "model_comparison.png"))
-        logger.info(f"Plots saved to {args.output_dir}")
+        logger.info("Plots saved to %s", args.output_dir)
     else:
-        logger.error(f"No results found at {results_path}. Run the pipeline first: python scripts/run_pipeline.py")
+        # Check if pipeline output CSVs exist
+        csv_path = os.path.join(args.results_dir, "model_comparison.csv")
+        if os.path.exists(csv_path):
+            logger.info("Pickle not found; model_comparison.csv exists at %s", csv_path)
+            logger.info("Re-run the pipeline to generate full evaluation plots: python scripts/run_pipeline.py")
+        else:
+            logger.error("No results found in %s. Run the pipeline first: python scripts/run_pipeline.py", args.results_dir)
         sys.exit(1)
 
 

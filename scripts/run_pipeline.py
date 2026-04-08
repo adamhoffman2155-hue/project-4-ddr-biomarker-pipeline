@@ -10,6 +10,7 @@ Usage::
 
 import argparse
 import os
+import pickle
 import sys
 
 # Ensure the project root is on sys.path
@@ -174,6 +175,12 @@ def main() -> None:
 
         plot_roc_curves(all_results, config.get_output_path("roc_all.png"))
         plot_model_comparison(all_results, config.get_output_path("comparison_all.png"))
+
+        # Save results for run_evaluation.py
+        pkl_path = config.get_output_path("model_results.pkl")
+        with open(pkl_path, "wb") as f:
+            pickle.dump(all_results, f)
+        logger.info("Model results saved to %s", pkl_path)
 
     logger.info("Pipeline complete. Results in %s", config.OUTPUT_DIR)
 

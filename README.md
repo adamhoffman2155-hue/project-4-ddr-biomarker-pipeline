@@ -54,12 +54,15 @@ project-4-ddr-biomarker-pipeline/
 ├── scripts/
 │   ├── run_pipeline.py
 │   ├── run_biomarker_analysis.py
-│   └── run_evaluation.py
+│   ├── run_evaluation.py
+│   └── poc/
+│       └── run_poc.py
 ├── tests/
 │   ├── __init__.py
 │   └── test_pipeline.py
 ├── data/
 └── results/
+    └── poc/
 ```
 
 ## Quick Start
@@ -71,6 +74,73 @@ cd project-4-ddr-biomarker-pipeline
 pip install -r requirements.txt
 python scripts/run_pipeline.py
 ```
+
+## Proof of Concept
+
+An end-to-end DDR biomarker analysis on real GDSC cell-line data, testing whether a mutation-based HRD score predicts sensitivity to PARP/DDR inhibitors.
+
+**Dataset:** GDSC v17 (IC50 values + binary mutation matrix) bundled with the `gdsctools` PyPI package (CancerRxGene / Sanger), plus GDSC release 8.5 drug metadata mirrored on GitHub. The canonical `cog.sanger.ac.uk` release 8.5 hosts are unreachable from the reproducibility sandbox, so v17 is the accessible snapshot.
+
+**HRD score:** count of mutations across an HR gene panel. Intended panel was 19 genes; the v17 genomic_features matrix pre-filters to frequently-mutated cancer genes, retaining only **4 of 19** (BRCA1, BRCA2, ATM, CHEK2). This truncation is expected to attenuate the correlation vs published HRD-PARPi benchmarks.
+
+**Drugs analysed:** Olaparib, Rucaparib, Talazoparib (PARPi), KU-55933 (ATM inhibitor), AZD7762 (CHK1/2 inhibitor). The originally-planned ATR inhibitors (VE-821, AZD6738) are absent from v17 — KU-55933 and AZD7762 are DDR-pathway stand-ins.
+
+**Reproduce:**
+```bash
+pip install pandas numpy scipy scikit-learn shap matplotlib gdsctools
+python scripts/poc/run_poc.py
+```
+
+**Spearman correlations (HRD score vs ln IC50, actual values):**
+
+| Drug | N | Spearman ρ | p-value |
+|---|---|---|---|
+| Olaparib | 847 | **+0.076** | 0.026 |
+| Rucaparib | 918 | +0.064 | 0.052 |
+| Talazoparib | 912 | +0.044 | 0.189 |
+| KU-55933 (ATMi) | 845 | +0.037 | 0.278 |
+| AZD7762 (CHKi) | 846 | +0.030 | 0.382 |
+
+**Per-drug 5-fold CV ROC-AUC (LogReg on 4 HR genes):**
+
+| Drug | N | N sensitive | CV AUC |
+|---|---|---|---|
+| Olaparib | 847 | 212 | 0.529 ± 0.022 |
+| Rucaparib | 918 | 230 | 0.510 ± 0.010 |
+| KU-55933 | 845 | 212 | 0.515 ± 0.011 |
+| AZD7762 | 846 | 212 | 0.498 ± 0.006 |
+| Talazoparib | 912 | 228 | 0.483 ± 0.006 |
+
+**HRD score distribution (0–4 possible):**
+
+| HRD score | N cell lines |
+|---|---|
+| 0 | 912 |
+| 1 | 66 |
+| 2 | 9 |
+| 3 | 1 |
+
+**Top SHAP features for Olaparib (4 HR genes only):**
+
+| Gene | mean \|SHAP\| | direction |
+|---|---|---|
+| BRCA1 | 0.120 | protective (sensitive) |
+| ATM | 0.066 | neutral |
+| BRCA2 | 0.040 | mildly resistant direction |
+| CHEK2 | 0.021 | protective (sensitive) |
+
+**Honest assessment:**
+- Correlations are **very weak and in the wrong direction** (+0.04 to +0.08 for PARPi; expected is -0.15 to -0.3 per published cell-line benchmarks).
+- CV AUCs are **~0.5–0.53** — essentially random for all drugs.
+- The root cause is documented: v17 genomic_features only retains 4 of 19 intended HR-panel genes, so the HRD score has a max of 4 and is 0 for 92% of cell lines. With so little signal to work with, a weak/null result is expected.
+- **This is a useful negative result:** mutation-only HRD scoring on a truncated gene panel does not recover PARPi sensitivity signal. To improve, a full cell-line WES-derived HRD-scar score (HRD-LOH, LST, TAI) would be needed.
+- BRCA1 still has the highest SHAP importance for Olaparib, pointing in the sensitivity direction, which is the one piece of biology the model does recover.
+
+**Limits:**
+- Mutation-only HRD is a crude proxy. Published HRD scar scores (HRD-LOH, LST, TAI, Myriad HRD) perform noticeably better.
+- 15 of 19 intended HR genes are unavailable in v17 (PALB2, RAD51 family, BARD1, BRIP1, NBN, MRE11, RAD50, FANC family).
+- VE-821 and AZD6738 are in GDSC 8.x but not v17, so ATRi sensitivity is not assessed directly.
+- Cell-line analysis only — no TCGA validation cohort.
 
 ## My Role
 

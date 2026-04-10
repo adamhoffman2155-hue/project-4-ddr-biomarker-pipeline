@@ -1,0 +1,72 @@
+DDR biomarker POC - summary
+============================================================
+
+Dataset: GDSC (v17 bundled with gdsctools PyPI package) +
+  GDSC release 8.5 drug compound metadata mirrored on GitHub
+  (deZealous/drugresponse@190ab870).
+
+Data-access caveat
+------------------
+The cog.sanger.ac.uk host serving the release 8.5 IC50 xlsx
+and mutations_all_20230202.csv is blocked from this sandbox
+(host not in egress allowlist).  We used the v17 snapshot
+bundled inside the gdsctools pypi wheel (CancerRxGene Sanger).
+
+Cell lines analysed (N): 988
+
+HR gene panel (requested): BRCA1, BRCA2, PALB2, RAD51, RAD51B, RAD51C, RAD51D, ATM, BARD1, BRIP1, CHEK2, FANCA, FANCC, FANCD2, FANCE, FANCF, NBN, MRE11A, RAD50
+  available in v17 genomic_features: ['BRCA1', 'BRCA2', 'ATM', 'CHEK2']
+  missing (pruned from v17 matrix): ['PALB2', 'RAD51', 'RAD51B', 'RAD51C', 'RAD51D', 'BARD1', 'BRIP1', 'FANCA', 'FANCC', 'FANCD2', 'FANCE', 'FANCF', 'NBN', 'MRE11A', 'RAD50']
+
+HRD score distribution (#mutations across available HR genes):
+  score=0: n=912
+  score=1: n=66
+  score=2: n=9
+  score=3: n=1
+  mean=0.088  std=0.324  max=3
+
+Drugs planned vs analysed
+-------------------------
+Planned PARPi: Olaparib, Rucaparib, Talazoparib
+Planned ATRi : VE-821 (Drug 2111), AZD6738 (Drug 1394/1917)
+  -> both absent from v17 snapshot.
+Fallback DDR inhibitors analysed in their place:
+  KU-55933 (Drug 1030, ATM)
+  AZD7762  (Drug 1022, CHK1/CHK2)
+
+Per-drug Spearman (HRD score vs ln IC50)
+-----------------------------------------
+  Olaparib     (Drug 1017): n= 847  rho=+0.076  p=0.0262  
+  Rucaparib    (Drug 1175): n= 918  rho=+0.064  p=0.0519  
+  Talazoparib  (Drug 1259): n= 912  rho=+0.044  p=0.189  
+  KU-55933     (Drug 1030): n= 845  rho=+0.037  p=0.278  
+  AZD7762      (Drug 1022): n= 846  rho=+0.030  p=0.382  
+
+Per-drug 5-fold CV ROC-AUC (LogReg on HR-gene mutations)
+--------------------------------------------------------
+  Olaparib     (Drug 1017): n= 847  n_sens= 212  AUC=0.529+/-0.022  
+  Rucaparib    (Drug 1175): n= 918  n_sens= 230  AUC=0.510+/-0.010  
+  Talazoparib  (Drug 1259): n= 912  n_sens= 228  AUC=0.483+/-0.006  
+  KU-55933     (Drug 1030): n= 845  n_sens= 212  AUC=0.515+/-0.011  
+  AZD7762      (Drug 1022): n= 846  n_sens= 212  AUC=0.498+/-0.006  
+
+SHAP run on best-AUC drug: Olaparib
+Top SHAP feature table -> results/poc/ddr_shap_top.csv
+
+Caveats and honest reporting
+----------------------------
+* Mutation-only HRD is a crude proxy.  Published genomic-scar
+  based HRD scores (HRD-LOH, LST, TAI, Myriad score) perform
+  noticeably better than binary mutation counts.
+* The v17 genomic_features matrix only retains frequently
+  mutated cancer genes, so 15 of the 19 intended HR-panel
+  genes (PALB2, RAD51, RAD51B/C/D, BARD1, BRIP1, NBN,
+  MRE11A, RAD50, FANCA/C/D2/E/F) are not represented.
+  This truncation is expected to attenuate HRD-sensitivity
+  correlations compared with the published literature.
+* Published Spearman rho for Olaparib vs mutation-only HRD
+  in cell line panels is typically -0.15 to -0.3; our
+  estimates should be interpreted against that expectation.
+* VE-821 and AZD6738 are in GDSC release 8.x but not in v17,
+  so ATRi sensitivity is not assessed directly; KU-55933
+  (ATMi) and AZD7762 (CHKi) are DDR-pathway stand-ins only.

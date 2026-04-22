@@ -4,6 +4,16 @@
 
 This is the fourth project in a [computational biology portfolio](https://github.com/adamhoffman2155-hue/bioinformatics-portfolio). My thesis identified ARID1A loss as a potential DDR vulnerability in GEA. This project directly tests that hypothesis computationally — integrating GDSC2 drug sensitivity data with DepMap mutation profiles to explore whether specific DDR mutations predict response to targeted therapies.
 
+## At a Glance
+
+| | |
+|---|---|
+| **Stack** | scikit-learn (LogReg · GradBoost) · SHAP · Mann-Whitney/BH FDR · Docker |
+| **Data** | GDSC v17 (IC50 + mutation matrix via gdsctools) + DepMap; 5 PARP/DDR drugs |
+| **POC headline** | 4-gene panel: CV AUC ~0.5 (honest null result); Talazoparib HRD ρ=+0.12 with richer panel |
+| **Role** | DDR/synthetic-lethality framing directly from thesis ARID1A finding; implementation AI-assisted |
+| **Portfolio** | Project 4 of 7 · [full narrative](https://github.com/adamhoffman2155-hue/bioinformatics-portfolio) |
+
 ## What It Does
 
 Integrates pharmacogenomics and mutation data to explore DDR biomarkers:

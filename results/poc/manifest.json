@@ -1,0 +1,50 @@
+{
+  "$schema": "https://github.com/adamhoffman2155-hue/bioinformatics-portfolio/blob/main/shared/poc-manifest.schema.json",
+  "project": "project-4-ddr-biomarker-pipeline",
+  "poc_title": "DDR biomarker analysis on full GDSC v17",
+  "poc_version": "v2",
+  "dataset": {
+    "name": "GDSC v17",
+    "source": "CancerRxGene / Sanger (bundled in gdsctools PyPI package)",
+    "substitute_for": "GDSC release 8.5 (hosts unreachable)",
+    "n_cell_lines": 988,
+    "ddr_genes_present": 11,
+    "msi_h_cell_lines": 60
+  },
+  "script": "scripts/poc/run_poc.py",
+  "generated_at": "2026-04-23",
+  "headline_metric": {
+    "name": "Talazoparib HRD Spearman rho",
+    "value": 0.121,
+    "p_value": 2.6e-4,
+    "n": 912,
+    "note": "significant after Bonferroni x 5 drugs"
+  },
+  "secondary_metrics": [
+    {
+      "name": "5-fold CV ROC-AUC (DDR + MSI + Tissue)",
+      "range": [0.68, 0.77],
+      "best": {"drug": "AZD7762", "value": 0.772, "std": 0.036}
+    },
+    {
+      "name": "5-fold CV ROC-AUC (DDR + MSI only)",
+      "range": [0.52, 0.60],
+      "note": "tissue context adds 10-25 AUC points"
+    },
+    {
+      "name": "MSI-H sensitivity (Mann-Whitney)",
+      "findings": [
+        {"drug": "KU-55933", "p": 0.022, "note": "MSI-H sensitive to ATMi"},
+        {"drug": "AZD7762", "p": 0.019, "note": "MSI-H sensitive to CHKi"}
+      ]
+    }
+  ],
+  "headline_text": "Talazoparib HRD ρ = +0.121 (p=3e-4, n=912); 5-fold CV AUC 0.68–0.77 with tissue context; MSI-H enriched for ATMi/CHKi sensitivity.",
+  "artifacts": [
+    "results/poc/poc_summary.txt",
+    "results/poc/hrd_vs_ic50.csv",
+    "results/poc/per_drug_cv_auc.csv",
+    "results/poc/msi_hrd_interaction.csv",
+    "results/poc/ddr_shap_top.csv"
+  ]
+}

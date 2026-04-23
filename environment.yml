@@ -13,3 +13,4 @@ dependencies:
   - pytest>=7.4
   - pip:
     - shap>=0.42
+    - gdsctools>=1.0

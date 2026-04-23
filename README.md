@@ -1,5 +1,7 @@
 # Project 4: DDR Biomarker & Drug Response Pipeline
 
+[![CI](https://github.com/adamhoffman2155-hue/project-4-ddr-biomarker-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/adamhoffman2155-hue/project-4-ddr-biomarker-pipeline/actions/workflows/ci.yml)
+
 **Research question:** Which DDR mutations predict sensitivity to PARP and ATR inhibitors?
 
 This is the fourth project in a [computational biology portfolio](https://github.com/adamhoffman2155-hue/bioinformatics-portfolio). My thesis identified ARID1A loss as a potential DDR vulnerability in GEA. This project directly tests that hypothesis computationally — integrating GDSC2 drug sensitivity data with DepMap mutation profiles to explore whether specific DDR mutations predict response to targeted therapies.

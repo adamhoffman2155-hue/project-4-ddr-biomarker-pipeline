@@ -6,3 +6,4 @@ matplotlib>=3.7
 seaborn>=0.12
 scipy>=1.11
 pytest>=7.4
+gdsctools>=1.0

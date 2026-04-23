@@ -71,8 +71,19 @@ project-4-ddr-biomarker-pipeline/
 git clone https://github.com/adamhoffman2155-hue/project-4-ddr-biomarker-pipeline.git
 cd project-4-ddr-biomarker-pipeline
 
+# Choose one environment
+docker build -t ddr-biomarker . && docker run -it -v $(pwd):/workspace ddr-biomarker bash
+#   or
+conda env create -f environment.yml && conda activate ddr-biomarker-pipeline
+#   or
 pip install -r requirements.txt
+
+# Full pipeline
 python scripts/run_pipeline.py
+
+# Individual stages
+python scripts/run_biomarker_analysis.py
+python scripts/run_evaluation.py
 ```
 
 ## Proof of Concept

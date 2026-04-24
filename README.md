@@ -1,5 +1,10 @@
 # Project 4: DDR Biomarker & Drug Response Pipeline
 
+![CI](https://github.com/adamhoffman2155-hue/project-4-ddr-biomarker-pipeline/actions/workflows/ci.yml/badge.svg)
+![Python](https://img.shields.io/badge/python-3.11-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Repro](https://img.shields.io/badge/FAIR_DOME_CURE-12%2F14_%7C_6%2F7_%7C_4%2F4-brightgreen)
+
 **Research question:** Which DDR mutations predict sensitivity to PARP and ATR inhibitors?
 
 This is the fourth project in a [computational biology portfolio](https://github.com/adamhoffman2155-hue/bioinformatics-portfolio). My thesis identified ARID1A loss as a potential DDR vulnerability in GEA. This project directly tests that hypothesis computationally — integrating GDSC2 drug sensitivity data with DepMap mutation profiles to explore whether specific DDR mutations predict response to targeted therapies.
@@ -160,6 +165,33 @@ I led the DDR synthetic lethality framing directly from my thesis findings on AR
 ## Context in the Portfolio
 
 This is **Project 4 of 7**. It narrows Project 3's broad pharmacogenomics approach to the specific DDR biology from my thesis. The biomarker features developed here (MSI status, DDR burden) feed directly into the survival model in Project 6. See the [portfolio site](https://github.com/adamhoffman2155-hue/bioinformatics-portfolio) for the full narrative.
+
+### Cross-project data flow
+
+```
+Project 3 (broad drug–response ML)
+        │
+        ▼
+Project 4 (this one — DDR-specific biomarker analysis + SHAP)
+        │   MSI status, HRD burden, drug-level AUC
+        ▼
+Project 6 (survival model — molecular covariate panel)
+```
+
+- **Upstream** — consumes GDSC v17 pharmacogenomics data (shared substrate with Project 3) and DDR gene lists from my thesis framing.
+- **Downstream** — the ranked biomarker panel (MSI, HRD score, DDR burden) feeds the survival-covariate column set in Project 6's Cox PH model.
+
+## Benchmarks
+
+| Benchmark | Output | Summary |
+| --- | --- | --- |
+| DDR+MSI vs +Tissue context | [`results/benchmark/benchmark_table.md`](results/benchmark/benchmark_table.md) | Tissue one-hots add +0.15 mean CV AUC over DDR+MSI alone — quantifies how much of the headline performance comes from tissue vs DDR biology. |
+
+Rebuild with `python scripts/build_benchmark_table.py`.
+
+## Reproducibility
+
+See [`REPRODUCIBILITY.md`](REPRODUCIBILITY.md) for the FAIR-BioRS / DOME / CURE self-scorecard (12/14 · 6/7 · 4/4).
 
 ## License
 

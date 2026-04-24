@@ -16,30 +16,48 @@
   "headline_metric": {
     "name": "Talazoparib HRD Spearman rho",
     "value": 0.121,
-    "p_value": 2.6e-4,
+    "p_value": 0.0002632455344114,
     "n": 912,
-    "note": "significant after Bonferroni x 5 drugs"
+    "note": "HRD_broad (11 DDR genes); Bonferroni-significant x 5 drugs"
   },
   "secondary_metrics": [
     {
       "name": "5-fold CV ROC-AUC (DDR + MSI + Tissue)",
-      "range": [0.68, 0.77],
-      "best": {"drug": "AZD7762", "value": 0.772, "std": 0.036}
+      "range": [
+        0.681,
+        0.772
+      ],
+      "best": {
+        "drug": "AZD7762",
+        "value": 0.772,
+        "std": 0.036
+      }
     },
     {
       "name": "5-fold CV ROC-AUC (DDR + MSI only)",
-      "range": [0.52, 0.60],
+      "range": [
+        0.522,
+        0.603
+      ],
       "note": "tissue context adds 10-25 AUC points"
     },
     {
       "name": "MSI-H sensitivity (Mann-Whitney)",
       "findings": [
-        {"drug": "KU-55933", "p": 0.022, "note": "MSI-H sensitive to ATMi"},
-        {"drug": "AZD7762", "p": 0.019, "note": "MSI-H sensitive to CHKi"}
+        {
+          "drug": "KU-55933",
+          "p": 0.022,
+          "note": "MSI-H sensitive to ATMi"
+        },
+        {
+          "drug": "AZD7762",
+          "p": 0.019,
+          "note": "MSI-H sensitive to CHKi"
+        }
       ]
     }
   ],
-  "headline_text": "Talazoparib HRD ρ = +0.121 (p=3e-4, n=912); 5-fold CV AUC 0.68–0.77 with tissue context; MSI-H enriched for ATMi/CHKi sensitivity.",
+  "headline_text": "Talazoparib HRD \u03c1 = +0.121 (p=2.6e-04, n=912); 5-fold CV AUC 0.68\u20130.77 with tissue context; MSI-H enriched for ATMi/CHKi sensitivity.",
   "artifacts": [
     "results/poc/poc_summary.txt",
     "results/poc/hrd_vs_ic50.csv",

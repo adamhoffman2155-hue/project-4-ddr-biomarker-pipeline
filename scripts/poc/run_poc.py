@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 import warnings
 from pathlib import Path
@@ -382,6 +383,14 @@ def main():
         cv_df=cv_df,
         shap_drug=shap_drug,
         out_path=RESULTS / "poc_summary.txt",
+    )
+
+    # [8] Regenerate results/poc/manifest.json so the portfolio site's
+    # headline numbers stay in sync with the freshly-written CSVs.
+    print("[8] Rebuilding manifest.json")
+    subprocess.run(
+        [sys.executable, str(Path(__file__).with_name("build_manifest.py"))],
+        check=True,
     )
     print("[done]")
 

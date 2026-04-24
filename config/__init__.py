@@ -1,1 +1,1 @@
-from .config import PipelineConfig
+from .config import PipelineConfig as PipelineConfig

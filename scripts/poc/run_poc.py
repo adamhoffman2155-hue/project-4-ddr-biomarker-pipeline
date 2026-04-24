@@ -39,13 +39,11 @@ which target the broader DDR pathway.
 
 from __future__ import annotations
 
-import json
-import os
-import sys
 import warnings
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -53,8 +51,8 @@ import pandas as pd
 from scipy.stats import spearmanr
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold, cross_val_score
-from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -65,19 +63,35 @@ RESULTS.mkdir(parents=True, exist_ok=True)
 
 # -------- configuration --------------------------------------------------
 HR_GENES_REQUESTED = [
-    "BRCA1", "BRCA2", "PALB2", "RAD51", "RAD51B", "RAD51C", "RAD51D",
-    "ATM", "BARD1", "BRIP1", "CHEK2", "FANCA", "FANCC", "FANCD2", "FANCE",
-    "FANCF", "NBN", "MRE11A", "RAD50",
+    "BRCA1",
+    "BRCA2",
+    "PALB2",
+    "RAD51",
+    "RAD51B",
+    "RAD51C",
+    "RAD51D",
+    "ATM",
+    "BARD1",
+    "BRIP1",
+    "CHEK2",
+    "FANCA",
+    "FANCC",
+    "FANCD2",
+    "FANCE",
+    "FANCF",
+    "NBN",
+    "MRE11A",
+    "RAD50",
 ]
 
 # Drugs originally targeted. v17 release does not contain the ATR inhibitors
 # (VE-821, AZD6738). We keep the PARPi and fall back to ATM / CHK inhibitors.
 DRUG_PLAN = {
-    1017: "Olaparib",       # PARPi
-    1175: "Rucaparib",      # PARPi
-    1259: "Talazoparib",    # PARPi
-    1030: "KU-55933",       # ATM inhibitor (ATR fallback)
-    1022: "AZD7762",        # CHEK1/2 inhibitor (DDR fallback)
+    1017: "Olaparib",  # PARPi
+    1175: "Rucaparib",  # PARPi
+    1259: "Talazoparib",  # PARPi
+    1030: "KU-55933",  # ATM inhibitor (ATR fallback)
+    1022: "AZD7762",  # CHEK1/2 inhibitor (DDR fallback)
 }
 
 RANDOM_STATE = 42
@@ -107,24 +121,42 @@ def spearman_per_drug(ic: pd.DataFrame, feats: pd.DataFrame, drug_plan: dict):
     for drug_id, drug_name in drug_plan.items():
         col = f"Drug_{drug_id}_IC50"
         if col not in ic.columns:
-            rows.append({
-                "drug_id": drug_id, "drug_name": drug_name, "n": 0,
-                "spearman_rho": np.nan, "p_value": np.nan,
-                "note": f"{col} not in GDSC v17 IC50",
-            })
+            rows.append(
+                {
+                    "drug_id": drug_id,
+                    "drug_name": drug_name,
+                    "n": 0,
+                    "spearman_rho": np.nan,
+                    "p_value": np.nan,
+                    "note": f"{col} not in GDSC v17 IC50",
+                }
+            )
             continue
         sub = ic[["COSMIC_ID", col]].dropna()
         merged = sub.merge(feats[["COSMIC_ID", "HRD_score"]], on="COSMIC_ID", how="inner")
         if merged.empty:
-            rows.append({"drug_id": drug_id, "drug_name": drug_name,
-                         "n": 0, "spearman_rho": np.nan, "p_value": np.nan,
-                         "note": "no joined rows"})
+            rows.append(
+                {
+                    "drug_id": drug_id,
+                    "drug_name": drug_name,
+                    "n": 0,
+                    "spearman_rho": np.nan,
+                    "p_value": np.nan,
+                    "note": "no joined rows",
+                }
+            )
             continue
         rho, pval = spearmanr(merged["HRD_score"], merged[col])
-        rows.append({"drug_id": drug_id, "drug_name": drug_name,
-                     "n": int(len(merged)),
-                     "spearman_rho": float(rho), "p_value": float(pval),
-                     "note": ""})
+        rows.append(
+            {
+                "drug_id": drug_id,
+                "drug_name": drug_name,
+                "n": int(len(merged)),
+                "spearman_rho": float(rho),
+                "p_value": float(pval),
+                "note": "",
+            }
+        )
         joined_cache[drug_id] = merged.rename(columns={col: "ln_IC50"})
     return pd.DataFrame(rows), joined_cache
 
@@ -135,19 +167,19 @@ def scatter_plot(joined_cache: dict, drug_plan: dict, out_path: Path):
         return
     ncols = 3
     nrows = int(np.ceil(len(drugs) / ncols))
-    fig, axes = plt.subplots(nrows, ncols, figsize=(4.2 * ncols, 3.6 * nrows),
-                             squeeze=False)
-    for ax, drug_id in zip(axes.flat, drugs):
+    fig, axes = plt.subplots(nrows, ncols, figsize=(4.2 * ncols, 3.6 * nrows), squeeze=False)
+    for ax, drug_id in zip(axes.flat, drugs, strict=False):
         df = joined_cache[drug_id]
         rho, p = spearmanr(df["HRD_score"], df["ln_IC50"])
         jitter = np.random.default_rng(drug_id).normal(0, 0.08, size=len(df))
-        ax.scatter(df["HRD_score"] + jitter, df["ln_IC50"],
-                   alpha=0.45, s=14, color="#2b6cb0")
+        ax.scatter(df["HRD_score"] + jitter, df["ln_IC50"], alpha=0.45, s=14, color="#2b6cb0")
         ax.set_xlabel("HRD mutation score")
         ax.set_ylabel("ln IC50")
-        ax.set_title(f"{drug_plan[drug_id]} (Drug_{drug_id})\n"
-                     f"rho={rho:.3f}  p={p:.2g}  n={len(df)}", fontsize=9)
-    for ax in axes.flat[len(drugs):]:
+        ax.set_title(
+            f"{drug_plan[drug_id]} (Drug_{drug_id})\nrho={rho:.3f}  p={p:.2g}  n={len(df)}",
+            fontsize=9,
+        )
+    for ax in axes.flat[len(drugs) :]:
         ax.axis("off")
     fig.suptitle("HRD mutation score vs. drug ln IC50 (GDSC v17)", y=1.02)
     fig.tight_layout()
@@ -155,71 +187,106 @@ def scatter_plot(joined_cache: dict, drug_plan: dict, out_path: Path):
     plt.close(fig)
 
 
-def cv_auc_per_drug(ic: pd.DataFrame, feats: pd.DataFrame, drug_plan: dict,
-                    hr_cols: list[str]):
+def cv_auc_per_drug(ic: pd.DataFrame, feats: pd.DataFrame, drug_plan: dict, hr_cols: list[str]):
     rows = []
     trained_cache = {}
     for drug_id, drug_name in drug_plan.items():
         col = f"Drug_{drug_id}_IC50"
         if col not in ic.columns:
-            rows.append({"drug_id": drug_id, "drug_name": drug_name,
-                         "n": 0, "n_sensitive": 0, "cv_auc_mean": np.nan,
-                         "cv_auc_std": np.nan,
-                         "note": "drug absent from IC50"})
+            rows.append(
+                {
+                    "drug_id": drug_id,
+                    "drug_name": drug_name,
+                    "n": 0,
+                    "n_sensitive": 0,
+                    "cv_auc_mean": np.nan,
+                    "cv_auc_std": np.nan,
+                    "note": "drug absent from IC50",
+                }
+            )
             continue
         sub = ic[["COSMIC_ID", col]].dropna()
-        merged = sub.merge(feats[["COSMIC_ID"] + hr_cols],
-                           on="COSMIC_ID", how="inner")
+        merged = sub.merge(feats[["COSMIC_ID"] + hr_cols], on="COSMIC_ID", how="inner")
         if len(merged) < 40:
-            rows.append({"drug_id": drug_id, "drug_name": drug_name,
-                         "n": len(merged), "n_sensitive": 0,
-                         "cv_auc_mean": np.nan, "cv_auc_std": np.nan,
-                         "note": "insufficient samples"})
+            rows.append(
+                {
+                    "drug_id": drug_id,
+                    "drug_name": drug_name,
+                    "n": len(merged),
+                    "n_sensitive": 0,
+                    "cv_auc_mean": np.nan,
+                    "cv_auc_std": np.nan,
+                    "note": "insufficient samples",
+                }
+            )
             continue
         q25 = merged[col].quantile(0.25)
         merged["sensitive"] = (merged[col] <= q25).astype(int)
         X = merged[hr_cols].values.astype(float)
         y = merged["sensitive"].values
         if y.sum() < 5 or (len(y) - y.sum()) < 5:
-            rows.append({"drug_id": drug_id, "drug_name": drug_name,
-                         "n": len(merged), "n_sensitive": int(y.sum()),
-                         "cv_auc_mean": np.nan, "cv_auc_std": np.nan,
-                         "note": "class imbalance"})
+            rows.append(
+                {
+                    "drug_id": drug_id,
+                    "drug_name": drug_name,
+                    "n": len(merged),
+                    "n_sensitive": int(y.sum()),
+                    "cv_auc_mean": np.nan,
+                    "cv_auc_std": np.nan,
+                    "note": "class imbalance",
+                }
+            )
             continue
-        pipe = Pipeline([
-            ("scale", StandardScaler(with_mean=False)),
-            ("lr", LogisticRegression(max_iter=2000,
-                                      class_weight="balanced",
-                                      random_state=RANDOM_STATE)),
-        ])
-        skf = StratifiedKFold(n_splits=5, shuffle=True,
-                              random_state=RANDOM_STATE)
+        pipe = Pipeline(
+            [
+                ("scale", StandardScaler(with_mean=False)),
+                (
+                    "lr",
+                    LogisticRegression(
+                        max_iter=2000, class_weight="balanced", random_state=RANDOM_STATE
+                    ),
+                ),
+            ]
+        )
+        skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE)
         try:
             scores = cross_val_score(pipe, X, y, cv=skf, scoring="roc_auc")
         except Exception as exc:
-            rows.append({"drug_id": drug_id, "drug_name": drug_name,
-                         "n": len(merged), "n_sensitive": int(y.sum()),
-                         "cv_auc_mean": np.nan, "cv_auc_std": np.nan,
-                         "note": f"cv error: {exc}"})
+            rows.append(
+                {
+                    "drug_id": drug_id,
+                    "drug_name": drug_name,
+                    "n": len(merged),
+                    "n_sensitive": int(y.sum()),
+                    "cv_auc_mean": np.nan,
+                    "cv_auc_std": np.nan,
+                    "note": f"cv error: {exc}",
+                }
+            )
             continue
-        rows.append({"drug_id": drug_id, "drug_name": drug_name,
-                     "n": len(merged), "n_sensitive": int(y.sum()),
-                     "cv_auc_mean": float(scores.mean()),
-                     "cv_auc_std": float(scores.std()),
-                     "note": ""})
+        rows.append(
+            {
+                "drug_id": drug_id,
+                "drug_name": drug_name,
+                "n": len(merged),
+                "n_sensitive": int(y.sum()),
+                "cv_auc_mean": float(scores.mean()),
+                "cv_auc_std": float(scores.std()),
+                "note": "",
+            }
+        )
         # fit on full data for SHAP
         pipe.fit(X, y)
-        trained_cache[drug_id] = {"model": pipe, "X": X, "y": y,
-                                  "feature_names": hr_cols}
+        trained_cache[drug_id] = {"model": pipe, "X": X, "y": y, "feature_names": hr_cols}
     return pd.DataFrame(rows), trained_cache
 
 
 def shap_on_best(cv_df: pd.DataFrame, trained_cache: dict, out_path: Path):
-    valid = cv_df.dropna(subset=["cv_auc_mean"]).sort_values(
-        "cv_auc_mean", ascending=False)
+    valid = cv_df.dropna(subset=["cv_auc_mean"]).sort_values("cv_auc_mean", ascending=False)
     if valid.empty:
         pd.DataFrame(columns=["drug_name", "feature", "mean_abs_shap"]).to_csv(
-            out_path, index=False)
+            out_path, index=False
+        )
         return None
     best = valid.iloc[0]
     best_id = int(best["drug_id"])
@@ -228,39 +295,54 @@ def shap_on_best(cv_df: pd.DataFrame, trained_cache: dict, out_path: Path):
         return None
     try:
         import shap
+
         explainer = shap.LinearExplainer(
             bundle["model"].named_steps["lr"],
             bundle["model"].named_steps["scale"].transform(bundle["X"]),
         )
         shap_values = explainer.shap_values(
-            bundle["model"].named_steps["scale"].transform(bundle["X"]))
+            bundle["model"].named_steps["scale"].transform(bundle["X"])
+        )
     except Exception as exc:  # pragma: no cover - defensive
         # Fallback: just use model coefficients as an approximation
         coefs = bundle["model"].named_steps["lr"].coef_.ravel()
-        df = pd.DataFrame({
-            "drug_name": best["drug_name"],
-            "feature": bundle["feature_names"],
-            "mean_abs_shap": np.abs(coefs),
-            "direction": np.sign(coefs),
-            "note": f"coef fallback ({exc})",
-        }).sort_values("mean_abs_shap", ascending=False)
+        df = pd.DataFrame(
+            {
+                "drug_name": best["drug_name"],
+                "feature": bundle["feature_names"],
+                "mean_abs_shap": np.abs(coefs),
+                "direction": np.sign(coefs),
+                "note": f"coef fallback ({exc})",
+            }
+        ).sort_values("mean_abs_shap", ascending=False)
         df.to_csv(out_path, index=False)
         return best["drug_name"]
 
     mean_abs = np.abs(shap_values).mean(axis=0)
     mean_signed = shap_values.mean(axis=0)
-    df = pd.DataFrame({
-        "drug_name": best["drug_name"],
-        "feature": bundle["feature_names"],
-        "mean_abs_shap": mean_abs,
-        "mean_signed_shap": mean_signed,
-    }).sort_values("mean_abs_shap", ascending=False)
+    df = pd.DataFrame(
+        {
+            "drug_name": best["drug_name"],
+            "feature": bundle["feature_names"],
+            "mean_abs_shap": mean_abs,
+            "mean_signed_shap": mean_signed,
+        }
+    ).sort_values("mean_abs_shap", ascending=False)
     df.to_csv(out_path, index=False)
     return best["drug_name"]
 
 
-def write_summary(n_cell_lines, drug_plan, hr_cols, missing,
-                  hrd_scores, spearman_df, cv_df, shap_drug, out_path: Path):
+def write_summary(
+    n_cell_lines,
+    drug_plan,
+    hr_cols,
+    missing,
+    hrd_scores,
+    spearman_df,
+    cv_df,
+    shap_drug,
+    out_path: Path,
+):
     lines = []
     lines.append("DDR biomarker POC - summary")
     lines.append("=" * 60)
@@ -286,8 +368,9 @@ def write_summary(n_cell_lines, drug_plan, hr_cols, missing,
     vc = hrd_scores.value_counts().sort_index()
     for k, v in vc.items():
         lines.append(f"  score={int(k)}: n={int(v)}")
-    lines.append(f"  mean={hrd_scores.mean():.3f}  std={hrd_scores.std():.3f}  "
-                 f"max={int(hrd_scores.max())}")
+    lines.append(
+        f"  mean={hrd_scores.mean():.3f}  std={hrd_scores.std():.3f}  max={int(hrd_scores.max())}"
+    )
     lines.append("")
     lines.append("Drugs planned vs analysed")
     lines.append("-------------------------")
@@ -304,7 +387,8 @@ def write_summary(n_cell_lines, drug_plan, hr_cols, missing,
         lines.append(
             f"  {r['drug_name']:<12} (Drug {int(r['drug_id'])}): "
             f"n={int(r['n']):4d}  rho={r['spearman_rho']:+.3f}  "
-            f"p={r['p_value']:.3g}  {r['note']}")
+            f"p={r['p_value']:.3g}  {r['note']}"
+        )
     lines.append("")
     lines.append("Per-drug 5-fold CV ROC-AUC (LogReg on HR-gene mutations)")
     lines.append("--------------------------------------------------------")
@@ -313,10 +397,10 @@ def write_summary(n_cell_lines, drug_plan, hr_cols, missing,
             f"  {r['drug_name']:<12} (Drug {int(r['drug_id'])}): "
             f"n={int(r['n']):4d}  n_sens={int(r['n_sensitive']):4d}  "
             f"AUC={r['cv_auc_mean']:.3f}+/-{r['cv_auc_std']:.3f}  "
-            f"{r['note']}")
+            f"{r['note']}"
+        )
     lines.append("")
-    lines.append("SHAP run on best-AUC drug: "
-                 f"{shap_drug if shap_drug else 'N/A'}")
+    lines.append(f"SHAP run on best-AUC drug: {shap_drug if shap_drug else 'N/A'}")
     lines.append("Top SHAP feature table -> results/poc/ddr_shap_top.csv")
     lines.append("")
     lines.append("Caveats and honest reporting")
@@ -364,8 +448,7 @@ def main():
     cv_df.to_csv(RESULTS / "per_drug_cv_auc.csv", index=False)
 
     print("[6] SHAP on best drug")
-    shap_drug = shap_on_best(cv_df, trained_cache,
-                             RESULTS / "ddr_shap_top.csv")
+    shap_drug = shap_on_best(cv_df, trained_cache, RESULTS / "ddr_shap_top.csv")
     print(f"   best drug: {shap_drug}")
 
     # restrict summary N to cell lines that have >= 1 drug IC50 and >= 1

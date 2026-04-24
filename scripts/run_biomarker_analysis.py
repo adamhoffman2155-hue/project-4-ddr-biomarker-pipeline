@@ -19,24 +19,25 @@ _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _PROJECT_ROOT)
 
 from config.config import PipelineConfig
+from src.biomarker_analysis import (
+    compute_effect_size,
+    run_shap_analysis,
+    run_statistical_tests,
+    summarize_biomarkers,
+)
 from src.data_loader import generate_synthetic_data
 from src.feature_engineering import build_feature_matrix
 from src.models import train_gradient_boosting
-from src.biomarker_analysis import (
-    run_shap_analysis,
-    run_statistical_tests,
-    compute_effect_size,
-    summarize_biomarkers,
-)
-from src.utils import setup_logging, set_seed
+from src.utils import set_seed, setup_logging
 
 logger = setup_logging("biomarker_analysis")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="DDR Biomarker Analysis")
-    parser.add_argument("--drug", type=str, default="olaparib",
-                        help="Drug to analyse (default: olaparib)")
+    parser.add_argument(
+        "--drug", type=str, default="olaparib", help="Drug to analyse (default: olaparib)"
+    )
     args = parser.parse_args()
 
     config = PipelineConfig()

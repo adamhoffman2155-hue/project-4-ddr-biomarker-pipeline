@@ -5,7 +5,7 @@ Combines SHAP-based feature importance, univariate statistical tests, and
 effect-size estimates into a single ranked biomarker summary table.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -19,7 +19,7 @@ logger = setup_logging(__name__)
 def run_shap_analysis(
     model: Any,
     X: pd.DataFrame,
-    feature_names: Optional[List[str]] = None,
+    feature_names: list[str] | None = None,
 ) -> pd.DataFrame:
     """Compute SHAP values for a fitted model and rank features.
 
@@ -66,10 +66,16 @@ def run_shap_analysis(
         else:
             importance = np.zeros(len(feature_names))
 
-        shap_df = pd.DataFrame({
-            "feature": feature_names,
-            "mean_abs_shap": importance,
-        }).sort_values("mean_abs_shap", ascending=False).reset_index(drop=True)
+        shap_df = (
+            pd.DataFrame(
+                {
+                    "feature": feature_names,
+                    "mean_abs_shap": importance,
+                }
+            )
+            .sort_values("mean_abs_shap", ascending=False)
+            .reset_index(drop=True)
+        )
         return shap_df
 
     # shap_values may be a list (one array per class) or a single array
@@ -81,13 +87,22 @@ def run_shap_analysis(
 
     mean_abs = np.abs(sv).mean(axis=0)
 
-    shap_df = pd.DataFrame({
-        "feature": feature_names,
-        "mean_abs_shap": mean_abs,
-    }).sort_values("mean_abs_shap", ascending=False).reset_index(drop=True)
+    shap_df = (
+        pd.DataFrame(
+            {
+                "feature": feature_names,
+                "mean_abs_shap": mean_abs,
+            }
+        )
+        .sort_values("mean_abs_shap", ascending=False)
+        .reset_index(drop=True)
+    )
 
-    logger.info("SHAP analysis complete — top feature: %s (%.4f)",
-                shap_df.iloc[0]["feature"], shap_df.iloc[0]["mean_abs_shap"])
+    logger.info(
+        "SHAP analysis complete — top feature: %s (%.4f)",
+        shap_df.iloc[0]["feature"],
+        shap_df.iloc[0]["mean_abs_shap"],
+    )
 
     return shap_df
 
@@ -95,7 +110,7 @@ def run_shap_analysis(
 def run_statistical_tests(
     X: pd.DataFrame,
     y: pd.Series,
-    feature_names: Optional[List[str]] = None,
+    feature_names: list[str] | None = None,
 ) -> pd.DataFrame:
     """Run Mann-Whitney U tests for each feature between classes.
 
@@ -116,32 +131,34 @@ def run_statistical_tests(
     sensitive_mask = y == 1
     resistant_mask = y == 0
 
-    records: List[Dict[str, Any]] = []
+    records: list[dict[str, Any]] = []
     for feat in feature_names:
         vals_sens = X.loc[sensitive_mask, feat].values
         vals_res = X.loc[resistant_mask, feat].values
 
         # Skip features with zero variance in both groups
         if np.std(vals_sens) == 0 and np.std(vals_res) == 0:
-            records.append({
-                "feature": feat,
-                "u_statistic": 0.0,
-                "p_value": 1.0,
-            })
+            records.append(
+                {
+                    "feature": feat,
+                    "u_statistic": 0.0,
+                    "p_value": 1.0,
+                }
+            )
             continue
 
         try:
-            u_stat, p_val = stats.mannwhitneyu(
-                vals_sens, vals_res, alternative="two-sided"
-            )
+            u_stat, p_val = stats.mannwhitneyu(vals_sens, vals_res, alternative="two-sided")
         except ValueError:
             u_stat, p_val = 0.0, 1.0
 
-        records.append({
-            "feature": feat,
-            "u_statistic": float(u_stat),
-            "p_value": float(p_val),
-        })
+        records.append(
+            {
+                "feature": feat,
+                "u_statistic": float(u_stat),
+                "p_value": float(p_val),
+            }
+        )
 
     stats_df = pd.DataFrame(records)
 
@@ -163,7 +180,8 @@ def run_statistical_tests(
 
     logger.info(
         "Statistical tests complete — %d features, %d significant (FDR<0.05)",
-        n_tests, int((stats_df["p_adjusted"] < 0.05).sum()),
+        n_tests,
+        int((stats_df["p_adjusted"] < 0.05).sum()),
     )
 
     return stats_df
@@ -172,7 +190,7 @@ def run_statistical_tests(
 def compute_effect_size(
     X: pd.DataFrame,
     y: pd.Series,
-    feature_names: Optional[List[str]] = None,
+    feature_names: list[str] | None = None,
 ) -> pd.DataFrame:
     """Compute Cohen's d effect size for each feature between classes.
 
@@ -191,7 +209,7 @@ def compute_effect_size(
     sensitive_mask = y == 1
     resistant_mask = y == 0
 
-    records: List[Dict[str, float]] = []
+    records: list[dict[str, float]] = []
     for feat in feature_names:
         vals_sens = X.loc[sensitive_mask, feat].values.astype(float)
         vals_res = X.loc[resistant_mask, feat].values.astype(float)
@@ -204,29 +222,29 @@ def compute_effect_size(
         # Pooled standard deviation
         n_s, n_r = len(vals_sens), len(vals_res)
         if n_s + n_r - 2 > 0 and (std_s > 0 or std_r > 0):
-            pooled_std = np.sqrt(
-                ((n_s - 1) * std_s ** 2 + (n_r - 1) * std_r ** 2)
-                / (n_s + n_r - 2)
-            )
+            pooled_std = np.sqrt(((n_s - 1) * std_s**2 + (n_r - 1) * std_r**2) / (n_s + n_r - 2))
             cohens_d = (mean_s - mean_r) / pooled_std if pooled_std > 0 else 0.0
         else:
             cohens_d = 0.0
 
-        records.append({
-            "feature": feat,
-            "cohens_d": float(cohens_d),
-            "abs_cohens_d": float(abs(cohens_d)),
-            "mean_sensitive": mean_s,
-            "mean_resistant": mean_r,
-        })
+        records.append(
+            {
+                "feature": feat,
+                "cohens_d": float(cohens_d),
+                "abs_cohens_d": float(abs(cohens_d)),
+                "mean_sensitive": mean_s,
+                "mean_resistant": mean_r,
+            }
+        )
 
-    effect_df = pd.DataFrame(records).sort_values(
-        "abs_cohens_d", ascending=False
-    ).reset_index(drop=True)
+    effect_df = (
+        pd.DataFrame(records).sort_values("abs_cohens_d", ascending=False).reset_index(drop=True)
+    )
 
     logger.info(
         "Effect size analysis complete — top feature: %s (d=%.3f)",
-        effect_df.iloc[0]["feature"], effect_df.iloc[0]["cohens_d"],
+        effect_df.iloc[0]["feature"],
+        effect_df.iloc[0]["cohens_d"],
     )
 
     return effect_df
@@ -277,8 +295,11 @@ def summarize_biomarkers(
     for i, row in merged.head(5).iterrows():
         logger.info(
             "  %d. %s  SHAP=%.4f  p_adj=%.4f  d=%.3f",
-            i + 1, row["feature"], row["mean_abs_shap"],
-            row["p_adjusted"], row.get("cohens_d", 0),
+            i + 1,
+            row["feature"],
+            row["mean_abs_shap"],
+            row["p_adjusted"],
+            row.get("cohens_d", 0),
         )
 
     return merged

@@ -6,7 +6,7 @@ Gradient Boosting classifiers, plus evaluation utilities for comparing
 model performance.
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -14,17 +14,14 @@ from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     accuracy_score,
-    auc,
     f1_score,
     precision_score,
     recall_score,
     roc_auc_score,
-    roc_curve,
-    precision_recall_curve,
 )
 from sklearn.model_selection import StratifiedKFold
 
-from .utils import setup_logging, set_seed
+from .utils import set_seed, setup_logging
 
 logger = setup_logging(__name__)
 
@@ -33,7 +30,7 @@ def _select_best_lr(
     X: pd.DataFrame,
     y: pd.Series,
     config: Any,
-) -> Tuple[LogisticRegression, float]:
+) -> tuple[LogisticRegression, float]:
     """Select the best regularisation strength via inner CV.
 
     Args:
@@ -46,7 +43,7 @@ def _select_best_lr(
     """
     lr_params = config.MODEL_PARAMS["LogisticRegression"]
     best_auc = -1.0
-    best_model: Optional[LogisticRegression] = None
+    best_model: LogisticRegression | None = None
 
     for c_val in lr_params["C_values"]:
         model = LogisticRegression(
@@ -62,7 +59,7 @@ def _select_best_lr(
             shuffle=True,
             random_state=config.RANDOM_SEED,
         )
-        fold_aucs: List[float] = []
+        fold_aucs: list[float] = []
         for train_idx, val_idx in inner_cv.split(X, y):
             X_tr, X_val = X.iloc[train_idx], X.iloc[val_idx]
             y_tr, y_val = y.iloc[train_idx], y.iloc[val_idx]
@@ -92,7 +89,7 @@ def train_logistic_regression(
     X: pd.DataFrame,
     y: pd.Series,
     config: Any,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Train a Logistic Regression model with stratified K-fold CV.
 
     The best regularisation strength is chosen by an inner CV loop, then
@@ -112,13 +109,11 @@ def train_logistic_regression(
 
     best_model, _ = _select_best_lr(X, y, config)
 
-    cv = StratifiedKFold(
-        n_splits=config.N_FOLDS, shuffle=True, random_state=config.RANDOM_SEED
-    )
+    cv = StratifiedKFold(n_splits=config.N_FOLDS, shuffle=True, random_state=config.RANDOM_SEED)
 
-    fold_metrics: List[Dict[str, float]] = []
-    all_y_true: List[np.ndarray] = []
-    all_y_prob: List[np.ndarray] = []
+    fold_metrics: list[dict[str, float]] = []
+    all_y_true: list[np.ndarray] = []
+    all_y_prob: list[np.ndarray] = []
 
     for fold, (train_idx, test_idx) in enumerate(cv.split(X, y), 1):
         X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
@@ -135,13 +130,12 @@ def train_logistic_regression(
     # Refit on full data for downstream use
     best_model.fit(X, y)
 
-    mean_metrics = {
-        key: float(np.mean([m[key] for m in fold_metrics]))
-        for key in fold_metrics[0]
-    }
+    mean_metrics = {key: float(np.mean([m[key] for m in fold_metrics])) for key in fold_metrics[0]}
     logger.info(
         "LR mean CV \u2014 AUC=%.3f  Acc=%.3f  F1=%.3f",
-        mean_metrics["auc"], mean_metrics["accuracy"], mean_metrics["f1"],
+        mean_metrics["auc"],
+        mean_metrics["accuracy"],
+        mean_metrics["f1"],
     )
 
     return {
@@ -157,7 +151,7 @@ def train_gradient_boosting(
     X: pd.DataFrame,
     y: pd.Series,
     config: Any,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Train a Gradient Boosting classifier with stratified K-fold CV.
 
     Args:
@@ -174,21 +168,17 @@ def train_gradient_boosting(
 
     gb_params = config.get_gb_params()
 
-    cv = StratifiedKFold(
-        n_splits=config.N_FOLDS, shuffle=True, random_state=config.RANDOM_SEED
-    )
+    cv = StratifiedKFold(n_splits=config.N_FOLDS, shuffle=True, random_state=config.RANDOM_SEED)
 
-    fold_metrics: List[Dict[str, float]] = []
-    all_y_true: List[np.ndarray] = []
-    all_y_prob: List[np.ndarray] = []
+    fold_metrics: list[dict[str, float]] = []
+    all_y_true: list[np.ndarray] = []
+    all_y_prob: list[np.ndarray] = []
 
     for fold, (train_idx, test_idx) in enumerate(cv.split(X, y), 1):
         X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
         y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
 
-        model = GradientBoostingClassifier(
-            random_state=config.RANDOM_SEED, **gb_params
-        )
+        model = GradientBoostingClassifier(random_state=config.RANDOM_SEED, **gb_params)
         model.fit(X_train, y_train)
 
         metrics = evaluate_model(model, X_test, y_test)
@@ -199,18 +189,15 @@ def train_gradient_boosting(
         logger.info("  Fold %d \u2014 AUC=%.3f  F1=%.3f", fold, metrics["auc"], metrics["f1"])
 
     # Refit on full data
-    final_model = GradientBoostingClassifier(
-        random_state=config.RANDOM_SEED, **gb_params
-    )
+    final_model = GradientBoostingClassifier(random_state=config.RANDOM_SEED, **gb_params)
     final_model.fit(X, y)
 
-    mean_metrics = {
-        key: float(np.mean([m[key] for m in fold_metrics]))
-        for key in fold_metrics[0]
-    }
+    mean_metrics = {key: float(np.mean([m[key] for m in fold_metrics])) for key in fold_metrics[0]}
     logger.info(
         "GBM mean CV \u2014 AUC=%.3f  Acc=%.3f  F1=%.3f",
-        mean_metrics["auc"], mean_metrics["accuracy"], mean_metrics["f1"],
+        mean_metrics["auc"],
+        mean_metrics["accuracy"],
+        mean_metrics["f1"],
     )
 
     return {
@@ -226,7 +213,7 @@ def evaluate_model(
     model: Any,
     X_test: pd.DataFrame,
     y_test: pd.Series,
-) -> Dict[str, float]:
+) -> dict[str, float]:
     """Evaluate a fitted classifier on held-out data.
 
     Args:
@@ -255,7 +242,7 @@ def evaluate_model(
     }
 
 
-def compare_models(results_dict: Dict[str, Dict[str, Any]]) -> pd.DataFrame:
+def compare_models(results_dict: dict[str, dict[str, Any]]) -> pd.DataFrame:
     """Print and return a comparison table of model performance.
 
     Args:

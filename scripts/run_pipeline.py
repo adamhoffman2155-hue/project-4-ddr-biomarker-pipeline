@@ -18,26 +18,26 @@ _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _PROJECT_ROOT)
 
 from config.config import PipelineConfig
-from src.data_loader import generate_synthetic_data, merge_datasets
-from src.feature_engineering import build_feature_matrix
-from src.models import (
-    train_logistic_regression,
-    train_gradient_boosting,
-    compare_models,
-)
 from src.biomarker_analysis import (
+    compute_effect_size,
     run_shap_analysis,
     run_statistical_tests,
-    compute_effect_size,
     summarize_biomarkers,
 )
+from src.data_loader import generate_synthetic_data, merge_datasets
 from src.evaluation import (
-    plot_roc_curves,
-    plot_precision_recall,
     plot_confusion_matrix,
     plot_model_comparison,
+    plot_precision_recall,
+    plot_roc_curves,
 )
-from src.utils import setup_logging, set_seed, Timer
+from src.feature_engineering import build_feature_matrix
+from src.models import (
+    compare_models,
+    train_gradient_boosting,
+    train_logistic_regression,
+)
+from src.utils import Timer, set_seed, setup_logging
 
 logger = setup_logging("pipeline")
 
@@ -48,19 +48,27 @@ def parse_args() -> argparse.Namespace:
         description="DDR Biomarker Discovery Pipeline",
     )
     parser.add_argument(
-        "--n-cell-lines", type=int, default=200,
+        "--n-cell-lines",
+        type=int,
+        default=200,
         help="Number of synthetic cell lines (default: 200)",
     )
     parser.add_argument(
-        "--drugs", nargs="+", default=None,
+        "--drugs",
+        nargs="+",
+        default=None,
         help="Subset of drugs to analyse (default: all 5)",
     )
     parser.add_argument(
-        "--output-dir", type=str, default=None,
+        "--output-dir",
+        type=str,
+        default=None,
         help="Override output directory",
     )
     parser.add_argument(
-        "--seed", type=int, default=42,
+        "--seed",
+        type=int,
+        default=42,
         help="Random seed (default: 42)",
     )
     return parser.parse_args()
@@ -113,7 +121,10 @@ def main() -> None:
         with Timer(f"Feature engineering ({drug})"):
             X, y = build_feature_matrix(mutation_df, ic50_df, drug, config)
 
-        if y.sum() < config.MIN_SAMPLES_PER_CLASS or (len(y) - y.sum()) < config.MIN_SAMPLES_PER_CLASS:
+        if (
+            y.sum() < config.MIN_SAMPLES_PER_CLASS
+            or (len(y) - y.sum()) < config.MIN_SAMPLES_PER_CLASS
+        ):
             logger.warning("Skipping %s — insufficient class balance", drug)
             continue
 
@@ -158,7 +169,8 @@ def main() -> None:
         # Confusion matrix for best model
         y_pred = best_model.predict(X)
         plot_confusion_matrix(
-            y.values, y_pred,
+            y.values,
+            y_pred,
             save_path=config.get_output_path(f"cm_{drug}.png"),
             title=f"Confusion Matrix — {best_name}",
         )

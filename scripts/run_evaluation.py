@@ -7,20 +7,21 @@ Usage:
 
 import argparse
 import os
-import sys
 import pickle
-import logging
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.evaluation import plot_roc_curves, plot_model_comparison
-from src.utils import setup_logging, ensure_dir
+from src.evaluation import plot_model_comparison, plot_roc_curves
+from src.utils import ensure_dir, setup_logging
 
 
 def main():
     parser = argparse.ArgumentParser(description="Generate evaluation plots")
     parser.add_argument("--results-dir", default="results", help="Directory with model results")
-    parser.add_argument("--output-dir", default="results/figures", help="Output directory for plots")
+    parser.add_argument(
+        "--output-dir", default="results/figures", help="Output directory for plots"
+    )
     args = parser.parse_args()
 
     logger = setup_logging("evaluation")
@@ -40,9 +41,14 @@ def main():
         csv_path = os.path.join(args.results_dir, "model_comparison.csv")
         if os.path.exists(csv_path):
             logger.info("Pickle not found; model_comparison.csv exists at %s", csv_path)
-            logger.info("Re-run the pipeline to generate full evaluation plots: python scripts/run_pipeline.py")
+            logger.info(
+                "Re-run the pipeline to generate full evaluation plots: python scripts/run_pipeline.py"
+            )
         else:
-            logger.error("No results found in %s. Run the pipeline first: python scripts/run_pipeline.py", args.results_dir)
+            logger.error(
+                "No results found in %s. Run the pipeline first: python scripts/run_pipeline.py",
+                args.results_dir,
+            )
         sys.exit(1)
 
 

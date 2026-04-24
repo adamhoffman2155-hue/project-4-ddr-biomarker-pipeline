@@ -5,8 +5,8 @@ Utility helpers: logging, seeding, directory creation, and timing.
 import logging
 import os
 import time
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Generator
 
 import numpy as np
 

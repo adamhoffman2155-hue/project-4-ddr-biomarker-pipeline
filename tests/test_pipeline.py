@@ -10,8 +10,6 @@ Run with::
 import os
 import sys
 
-import numpy as np
-import pandas as pd
 import pytest
 
 # Ensure the project root is importable
@@ -19,6 +17,12 @@ _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _PROJECT_ROOT)
 
 from config.config import PipelineConfig
+from src.biomarker_analysis import (
+    compute_effect_size,
+    run_shap_analysis,
+    run_statistical_tests,
+    summarize_biomarkers,
+)
 from src.data_loader import generate_synthetic_data, merge_datasets
 from src.feature_engineering import (
     build_feature_matrix,
@@ -30,12 +34,6 @@ from src.models import (
     evaluate_model,
     train_gradient_boosting,
     train_logistic_regression,
-)
-from src.biomarker_analysis import (
-    compute_effect_size,
-    run_shap_analysis,
-    run_statistical_tests,
-    summarize_biomarkers,
 )
 
 
@@ -61,15 +59,14 @@ def synthetic_data(config):
 def feature_data(synthetic_data, config):
     """Build feature matrix for olaparib."""
     data = synthetic_data
-    X, y = build_feature_matrix(
-        data["mutations"], data["ic50"], "olaparib", config
-    )
+    X, y = build_feature_matrix(data["mutations"], data["ic50"], "olaparib", config)
     return X, y
 
 
 # ------------------------------------------------------------------
 # Data loader tests
 # ------------------------------------------------------------------
+
 
 class TestSyntheticData:
     def test_synthetic_data_shape(self, synthetic_data, config):
@@ -89,15 +86,14 @@ class TestSyntheticData:
 
     def test_merge_preserves_rows(self, synthetic_data):
         """Merging IC50 and mutation matrices should keep all shared rows."""
-        merged = merge_datasets(
-            synthetic_data["ic50"], synthetic_data["mutations"]
-        )
+        merged = merge_datasets(synthetic_data["ic50"], synthetic_data["mutations"])
         assert len(merged) == 100
 
 
 # ------------------------------------------------------------------
 # Feature engineering tests
 # ------------------------------------------------------------------
+
 
 class TestFeatureEngineering:
     def test_feature_engineering_output(self, feature_data, config):
@@ -138,6 +134,7 @@ class TestFeatureEngineering:
 # Model tests
 # ------------------------------------------------------------------
 
+
 class TestModels:
     def test_model_training_returns_metrics(self, feature_data, config):
         """Both training functions should return a dict with required keys."""
@@ -169,6 +166,7 @@ class TestModels:
 # ------------------------------------------------------------------
 # Biomarker analysis tests
 # ------------------------------------------------------------------
+
 
 class TestBiomarkerAnalysis:
     def test_shap_values_shape(self, feature_data, config):

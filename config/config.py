@@ -5,10 +5,10 @@ Defines gene lists, model hyperparameters, drug panels, and all
 configurable constants used across the pipeline.
 """
 
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Any, Optional
-import os
+from typing import Any
 
 
 @dataclass
@@ -39,39 +39,65 @@ class PipelineConfig:
     # ------------------------------------------------------------------
     # Gene panels
     # ------------------------------------------------------------------
-    DDR_GENES: List[str] = field(default_factory=lambda: [
-        "BRCA1", "BRCA2", "ATM", "ATR", "PALB2", "RAD51",
-        "MLH1", "MSH2", "MSH6", "POLE", "ARID1A", "CDK12", "CHEK2",
-    ])
+    DDR_GENES: list[str] = field(
+        default_factory=lambda: [
+            "BRCA1",
+            "BRCA2",
+            "ATM",
+            "ATR",
+            "PALB2",
+            "RAD51",
+            "MLH1",
+            "MSH2",
+            "MSH6",
+            "POLE",
+            "ARID1A",
+            "CDK12",
+            "CHEK2",
+        ]
+    )
 
-    HR_GENES: List[str] = field(default_factory=lambda: [
-        "BRCA1", "BRCA2", "PALB2", "RAD51", "ATM", "ATR",
-    ])
+    HR_GENES: list[str] = field(
+        default_factory=lambda: [
+            "BRCA1",
+            "BRCA2",
+            "PALB2",
+            "RAD51",
+            "ATM",
+            "ATR",
+        ]
+    )
 
-    MMR_GENES: List[str] = field(default_factory=lambda: [
-        "MLH1", "MSH2", "MSH6",
-    ])
+    MMR_GENES: list[str] = field(
+        default_factory=lambda: [
+            "MLH1",
+            "MSH2",
+            "MSH6",
+        ]
+    )
 
     # ------------------------------------------------------------------
     # Model hyper-parameters
     # ------------------------------------------------------------------
-    MODEL_PARAMS: Dict[str, Dict[str, Any]] = field(default_factory=lambda: {
-        "LogisticRegression": {
-            "C_values": [0.01, 0.1, 1.0, 10.0],
-            "penalty": "l2",
-            "solver": "lbfgs",
-            "max_iter": 2000,
-            "class_weight": "balanced",
-        },
-        "GradientBoosting": {
-            "n_estimators": 200,
-            "max_depth": 4,
-            "learning_rate": 0.1,
-            "subsample": 0.8,
-            "min_samples_split": 10,
-            "min_samples_leaf": 5,
-        },
-    })
+    MODEL_PARAMS: dict[str, dict[str, Any]] = field(
+        default_factory=lambda: {
+            "LogisticRegression": {
+                "C_values": [0.01, 0.1, 1.0, 10.0],
+                "penalty": "l2",
+                "solver": "lbfgs",
+                "max_iter": 2000,
+                "class_weight": "balanced",
+            },
+            "GradientBoosting": {
+                "n_estimators": 200,
+                "max_depth": 4,
+                "learning_rate": 0.1,
+                "subsample": 0.8,
+                "min_samples_split": 10,
+                "min_samples_leaf": 5,
+            },
+        }
+    )
 
     # ------------------------------------------------------------------
     # Reproducibility & cross-validation
@@ -82,25 +108,31 @@ class PipelineConfig:
     # ------------------------------------------------------------------
     # Paths
     # ------------------------------------------------------------------
-    OUTPUT_DIR: str = field(default_factory=lambda: os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "results",
-    ))
-    DATA_DIR: str = field(default_factory=lambda: os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "data",
-    ))
+    OUTPUT_DIR: str = field(
+        default_factory=lambda: os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "results",
+        )
+    )
+    DATA_DIR: str = field(
+        default_factory=lambda: os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "data",
+        )
+    )
 
     # ------------------------------------------------------------------
     # Drug panel
     # ------------------------------------------------------------------
-    DDR_DRUGS: List[str] = field(default_factory=lambda: [
-        "olaparib",
-        "rucaparib",
-        "talazoparib",
-        "AZD6738",
-        "VE-822",
-    ])
+    DDR_DRUGS: list[str] = field(
+        default_factory=lambda: [
+            "olaparib",
+            "rucaparib",
+            "talazoparib",
+            "AZD6738",
+            "VE-822",
+        ]
+    )
 
     # ------------------------------------------------------------------
     # IC50 classification
@@ -110,10 +142,18 @@ class PipelineConfig:
     # ------------------------------------------------------------------
     # Synthetic-data parameters
     # ------------------------------------------------------------------
-    TISSUE_TYPES: List[str] = field(default_factory=lambda: [
-        "breast", "ovarian", "prostate", "lung", "pancreatic",
-        "colorectal", "bladder", "endometrial",
-    ])
+    TISSUE_TYPES: list[str] = field(
+        default_factory=lambda: [
+            "breast",
+            "ovarian",
+            "prostate",
+            "lung",
+            "pancreatic",
+            "colorectal",
+            "bladder",
+            "endometrial",
+        ]
+    )
 
     MUTATION_RATE: float = 0.10
     SENSITIVITY_BOOST: float = 0.30
@@ -132,7 +172,7 @@ class PipelineConfig:
         Path(self.DATA_DIR).mkdir(parents=True, exist_ok=True)
         return os.path.join(self.DATA_DIR, filename)
 
-    def get_lr_param_grid(self) -> List[Dict[str, Any]]:
+    def get_lr_param_grid(self) -> list[dict[str, Any]]:
         """Return an sklearn-compatible parameter grid for LogisticRegression."""
         lr = self.MODEL_PARAMS["LogisticRegression"]
         return [
@@ -146,7 +186,7 @@ class PipelineConfig:
             for c in lr["C_values"]
         ]
 
-    def get_gb_params(self) -> Dict[str, Any]:
+    def get_gb_params(self) -> dict[str, Any]:
         """Return a flat dict of GradientBoosting constructor kwargs."""
         return dict(self.MODEL_PARAMS["GradientBoosting"])
 

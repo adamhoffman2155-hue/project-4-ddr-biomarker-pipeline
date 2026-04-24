@@ -6,9 +6,6 @@ with biologically motivated composite features (HRD score, MSI status,
 DDR burden).
 """
 
-from typing import List, Optional, Tuple
-
-import numpy as np
 import pandas as pd
 
 from .utils import setup_logging
@@ -18,7 +15,7 @@ logger = setup_logging(__name__)
 
 def compute_hrd_score(
     mutation_row: pd.Series,
-    hr_genes: Optional[List[str]] = None,
+    hr_genes: list[str] | None = None,
 ) -> int:
     """Count pathogenic mutations in HR-pathway genes.
 
@@ -40,7 +37,7 @@ def compute_hrd_score(
 
 def compute_msi_status(
     mutation_row: pd.Series,
-    mmr_genes: Optional[List[str]] = None,
+    mmr_genes: list[str] | None = None,
 ) -> int:
     """Determine microsatellite-instability status from MMR gene mutations.
 
@@ -59,7 +56,7 @@ def compute_msi_status(
 
 def compute_ddr_burden(
     mutation_row: pd.Series,
-    ddr_genes: Optional[List[str]] = None,
+    ddr_genes: list[str] | None = None,
 ) -> int:
     """Total number of DDR-gene mutations for a cell line.
 
@@ -72,8 +69,19 @@ def compute_ddr_burden(
     """
     if ddr_genes is None:
         ddr_genes = [
-            "BRCA1", "BRCA2", "ATM", "ATR", "PALB2", "RAD51",
-            "MLH1", "MSH2", "MSH6", "POLE", "ARID1A", "CDK12", "CHEK2",
+            "BRCA1",
+            "BRCA2",
+            "ATM",
+            "ATR",
+            "PALB2",
+            "RAD51",
+            "MLH1",
+            "MSH2",
+            "MSH6",
+            "POLE",
+            "ARID1A",
+            "CDK12",
+            "CHEK2",
         ]
     present = [g for g in ddr_genes if g in mutation_row.index]
     return int(mutation_row[present].sum())
@@ -84,7 +92,7 @@ def build_feature_matrix(
     ic50_df: pd.DataFrame,
     drug_name: str,
     config: object,
-) -> Tuple[pd.DataFrame, pd.Series]:
+) -> tuple[pd.DataFrame, pd.Series]:
     """Assemble the modelling feature matrix **X** and label vector **y**.
 
     Features include:
@@ -110,8 +118,7 @@ def build_feature_matrix(
     """
     if drug_name not in ic50_df.columns:
         raise ValueError(
-            f"Drug '{drug_name}' not found in IC50 data. "
-            f"Available: {list(ic50_df.columns)}"
+            f"Drug '{drug_name}' not found in IC50 data. Available: {list(ic50_df.columns)}"
         )
 
     # Align indices
@@ -122,24 +129,16 @@ def build_feature_matrix(
     mut = mutation_df.loc[common]
     ic50 = ic50_df.loc[common, drug_name]
 
-    logger.info(
-        "Building feature matrix for %s: %d cell lines", drug_name, len(common)
-    )
+    logger.info("Building feature matrix for %s: %d cell lines", drug_name, len(common))
 
     # --- Individual gene features ---
     ddr_genes = config.DDR_GENES
     gene_features = mut[[g for g in ddr_genes if g in mut.columns]].copy()
 
     # --- Composite features ---
-    hrd_scores = mut.apply(
-        lambda row: compute_hrd_score(row, config.HR_GENES), axis=1
-    )
-    msi_status = mut.apply(
-        lambda row: compute_msi_status(row, config.MMR_GENES), axis=1
-    )
-    ddr_burden = mut.apply(
-        lambda row: compute_ddr_burden(row, config.DDR_GENES), axis=1
-    )
+    hrd_scores = mut.apply(lambda row: compute_hrd_score(row, config.HR_GENES), axis=1)
+    msi_status = mut.apply(lambda row: compute_msi_status(row, config.MMR_GENES), axis=1)
+    ddr_burden = mut.apply(lambda row: compute_ddr_burden(row, config.DDR_GENES), axis=1)
 
     X = gene_features.copy()
     X["hrd_score"] = hrd_scores
@@ -155,7 +154,10 @@ def build_feature_matrix(
     n_res = len(y) - n_sens
     logger.info(
         "  Class balance \u2014 sensitive: %d (%.1f%%), resistant: %d (%.1f%%)",
-        n_sens, 100 * n_sens / len(y), n_res, 100 * n_res / len(y),
+        n_sens,
+        100 * n_sens / len(y),
+        n_res,
+        100 * n_res / len(y),
     )
 
     return X, y
@@ -163,7 +165,7 @@ def build_feature_matrix(
 
 def add_interaction_features(
     X: pd.DataFrame,
-    gene_pairs: Optional[List[Tuple[str, str]]] = None,
+    gene_pairs: list[tuple[str, str]] | None = None,
 ) -> pd.DataFrame:
     """Add pairwise interaction terms for selected gene pairs.
 

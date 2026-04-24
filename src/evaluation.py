@@ -5,9 +5,10 @@ Generates ROC curves, precision-recall curves, confusion matrices,
 and model-comparison bar charts.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 import matplotlib
+
 matplotlib.use("Agg")  # non-interactive backend for headless servers
 
 import matplotlib.pyplot as plt
@@ -15,11 +16,10 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from sklearn.metrics import (
-    ConfusionMatrixDisplay,
+    auc,
     confusion_matrix,
     precision_recall_curve,
     roc_curve,
-    auc,
 )
 
 from .utils import ensure_dir, setup_logging
@@ -28,8 +28,8 @@ logger = setup_logging(__name__)
 
 
 def plot_roc_curves(
-    results_dict: Dict[str, Dict[str, Any]],
-    save_path: Optional[str] = None,
+    results_dict: dict[str, dict[str, Any]],
+    save_path: str | None = None,
 ) -> None:
     """Plot ROC curves for one or more models on the same axes.
 
@@ -64,8 +64,8 @@ def plot_roc_curves(
 
 
 def plot_precision_recall(
-    results_dict: Dict[str, Dict[str, Any]],
-    save_path: Optional[str] = None,
+    results_dict: dict[str, dict[str, Any]],
+    save_path: str | None = None,
 ) -> None:
     """Plot precision-recall curves for one or more models.
 
@@ -81,12 +81,9 @@ def plot_precision_recall(
         y_prob = result["y_prob"]
         precision_vals, recall_vals, _ = precision_recall_curve(y_true, y_prob)
         pr_auc = auc(recall_vals, precision_vals)
-        ax.plot(recall_vals, precision_vals, lw=2,
-                label=f"{name} (AP = {pr_auc:.3f})")
+        ax.plot(recall_vals, precision_vals, lw=2, label=f"{name} (AP = {pr_auc:.3f})")
 
-    baseline = np.mean(np.concatenate(
-        [r["y_true"] for r in results_dict.values()]
-    ))
+    baseline = np.mean(np.concatenate([r["y_true"] for r in results_dict.values()]))
     ax.axhline(y=baseline, color="k", linestyle="--", lw=1, label="Baseline")
 
     ax.set_xlabel("Recall", fontsize=12)
@@ -107,7 +104,7 @@ def plot_precision_recall(
 def plot_confusion_matrix(
     y_true: np.ndarray,
     y_pred: np.ndarray,
-    save_path: Optional[str] = None,
+    save_path: str | None = None,
     title: str = "Confusion Matrix",
 ) -> None:
     """Plot a confusion-matrix heatmap.
@@ -121,7 +118,10 @@ def plot_confusion_matrix(
     fig, ax = plt.subplots(figsize=(6, 5))
     cm = confusion_matrix(y_true, y_pred)
     sns.heatmap(
-        cm, annot=True, fmt="d", cmap="Blues",
+        cm,
+        annot=True,
+        fmt="d",
+        cmap="Blues",
         xticklabels=["Resistant", "Sensitive"],
         yticklabels=["Resistant", "Sensitive"],
         ax=ax,
@@ -139,8 +139,8 @@ def plot_confusion_matrix(
 
 
 def plot_model_comparison(
-    results_dict: Dict[str, Dict[str, Any]],
-    save_path: Optional[str] = None,
+    results_dict: dict[str, dict[str, Any]],
+    save_path: str | None = None,
 ) -> None:
     """Bar chart comparing mean CV metrics across models.
 

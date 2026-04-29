@@ -1,0 +1,50 @@
+{
+  "id": 4,
+  "title": "DDR Biomarker & Drug Response Pipeline",
+  "question": "Which DDR mutations predict sensitivity to PARP and ATR inhibitors?",
+  "stack": ["scikit-learn (LogReg, GradientBoosting)", "SHAP", "Mann-Whitney U", "Benjamini-Hochberg FDR", "Docker"],
+  "dataset_target": "GDSC2 release 8.5 + DepMap mutation profiles + ATR inhibitor coverage (VE-821, AZD6738)",
+  "dataset_actual_poc": "GDSC v17 (988 cell lines, IC50 + binary mutation matrix via gdsctools)",
+  "substitution_reason": "cog.sanger.ac.uk release 8.5 not reachable; v17 is the accessible bundle. ATR inhibitors VE-821 and AZD6738 are absent from v17 — KU-55933 (ATM) and AZD7762 (CHK) used as DDR-pathway controls.",
+  "status": "Runnable POC",
+  "reproduce_command": "pip install pandas numpy scipy scikit-learn shap matplotlib gdsctools && python scripts/poc/run_poc.py",
+  "outputs": [
+    "results/poc/hrd_vs_ic50.csv",
+    "results/poc/per_drug_cv_auc.csv",
+    "results/poc/msi_hrd_interaction.csv",
+    "results/poc/ddr_shap_top.csv",
+    "results/poc/poc_summary.txt"
+  ],
+  "headline_result": {
+    "feature_block": "11 DDR genes retained from a 26-gene panel + MSI + tissue covariates",
+    "n_cell_lines": 988,
+    "n_msi_h": 60,
+    "best_correlation": {
+      "drug": "Talazoparib",
+      "feature": "HRD_broad (sum of 11 DDR-gene mutations)",
+      "spearman_rho": "+0.121",
+      "p_value": "0.00026",
+      "n": 912,
+      "note": "Survives Bonferroni correction across 5 drugs (alpha=0.01)"
+    },
+    "best_cv_auc": {
+      "drug": "AZD7762 (CHK1/2 inhibitor)",
+      "feature_set": "DDR + MSI + Tissue (39 features)",
+      "auc_mean": 0.772,
+      "auc_std": 0.036
+    },
+    "tissue_effect": "Adding tissue context lifts per-drug CV AUC from 0.52–0.60 to 0.68–0.77 — most of the discriminative signal is lineage-driven",
+    "msi_subgroup_finding": "MSI-H cell lines preferentially sensitive to ATM (KU-55933 MWU p=0.022) and CHK (AZD7762 MWU p=0.019) inhibitors — independent of HRD score",
+    "honest_assessment": "Direction of HRD–IC50 correlation is positive (more mutations → higher IC50, more resistant), reflecting confounding by general cancer-driver burden (TP53, etc.) rather than DDR-specific synthetic lethality"
+  },
+  "limitations": [
+    "Mutation-only HRD is a crude proxy; published HRD scar scores (HRD-LOH, LST, TAI, Myriad) typically perform better",
+    "15 of 26 intended DDR genes are unavailable in v17 (PALB2, RAD51 family, BARD1, BRIP1, NBN, MRE11, RAD50, FANC family)",
+    "VE-821 and AZD6738 (ATRi) are in GDSC 8.x but not v17 — ATR sensitivity is not directly assessed",
+    "Tissue covariate is doing most of the work in the 0.68–0.77 AUC range; DDR/MSI contribute less than tissue alone in several drugs",
+    "Cell-line analysis only — no patient cohort validation"
+  ],
+  "feeds_into": ["project-6-gea-survival-pipeline"],
+  "portfolio_position": "Project 4 of 7",
+  "role": "DDR/synthetic-lethality framing from thesis ARID1A finding; feature construction around HRD biology; biological coherence review of outputs. Implementation AI-assisted."
+}
